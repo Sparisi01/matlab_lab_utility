@@ -77,7 +77,7 @@ classdef functionFit < handle
             end
 
             % Esegui fit lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
-            [par, errpar, yfit, chi2norm, dof, p_value] = linearFit(self);
+            [par, errpar, yfit, chi2norm, dof, p_value] = modelFit(self);
             self.par = par;
             self.errpar = errpar;
             self.chi2norm = chi2norm;
@@ -106,7 +106,7 @@ classdef functionFit < handle
             end
 
             % Esegui fit non lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
-            [par, errpar, yfit, chi2norm, dof, p_value] = nonLinearFit(self);
+            [par, errpar, yfit, chi2norm, dof, p_value] = linearFit(self);
             self.par = par;
             self.errpar = errpar;
             self.chi2norm = chi2norm;
@@ -279,7 +279,7 @@ classdef functionFit < handle
             % Costruzione grafico principale
             ax(1) = nexttile(1, [h - 1, 1]);
             delta_x = max(self.datax) - min(self.datax);
-
+            
             % Disegna la funzione con parametri ottimizzati.
             if isLinearFit
                 fplot(@(x) self.par(1) + x * self.par(2), 'Color', 'red', 'LineStyle', '-')
@@ -317,15 +317,15 @@ classdef functionFit < handle
             end
 
             % Costruisci dinamicamente la legenda con n parametri.
-            text = "";           
+            txt = "";           
 
             for ii = 1:length(self.par)
                 t = numberToText(self.par(ii), self.errpar(ii));
 
                 if (self.pedice ~= ' ')
-                    text(ii) = tmp_parnames(ii) + "_{" + self.pedice + "} = " + t + tmp_units(ii);
+                    txt(ii) = tmp_parnames(ii) + "_{" + self.pedice + "} = " + t + tmp_units(ii);
                 else
-                    text(ii) = tmp_parnames(ii) + " = " + t + tmp_units(ii);
+                    txt(ii) = tmp_parnames(ii) + " = " + t + tmp_units(ii);
                 end
 
             end
@@ -338,12 +338,14 @@ classdef functionFit < handle
                 nRound = 2;
             end
 
-            text(length(self.par) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm * self.dof, nRound) + "/" + self.dof;
-
+            txt(length(self.par) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm * self.dof, nRound) + "/" + self.dof;
+            
+            
+            % Dinamic position
             annotation("textbox", self.box, ...
                 "BackgroundColor", [1, 1, 1], ...
                 "FontSize", self.fontsize, ...
-                "String", text, ...
+                "String", txt, ...
                 'FitBoxToText', 'on' ...
             );
             
