@@ -125,14 +125,16 @@ classdef functionFit < handle
             if (strlength(file_name) > 0)
                 exportFigure(fig, ax, file_name);
             end
-
+            
         end
 
         % Funzione per fit lineare
         function [par, errpar, yfit, chi2norm, dof, p_value] = linearFit(self)
 
             % Contolla validità parametri
-            %safetyCheck(self);
+            if ~safetyCheck(self)
+                return
+            end
 
             data_x = self.datax;
             data_y = self.datay;
@@ -200,7 +202,9 @@ classdef functionFit < handle
         function [par, errpar, yfit, chi2norm, dof, p_value] = modelFit(self)
 
             % Contolla validità parametri
-            safetyCheck(self);
+            if ~safetyCheck(self)
+                return
+            end
 
             options = optimset('lsqnonlin');
 
@@ -242,28 +246,24 @@ classdef functionFit < handle
     methods (Hidden)
 
         % Fa tante cose belle
-        function safetyCheck(self)
-
+        function check = safetyCheck(self)           
+            check = true;
             % Controlla dimensione dati
-            if size(self.datay) ~= size(self.datax) || ...
-                    size(self.datay) ~= size(self.sigmay) || ...
-                    size(self.sigmax) ~= size(self.sigmay)
-
-                error(["datax, datay, sigmax. and sigmay devono essere della stesa dimensione:", ...
-                           "datax: " + size(self.datax) ...
-                           "datay: " + size(self.datay) ...
-                           "sigmax: " + size(self.sigmax) ...
-                           "sigmax: " + size(self.sigmay)])
+            if any(size(self.datay) ~= size(self.datax)) || ...
+                    any(size(self.datay) ~= size(self.sigmay)) || ...
+                    any(size(self.sigmax) ~= size(self.sigmay))
+                check = false;
+                error( 'u:stuffed:it' , [ 'datax, datay, sigmax. and sigmay devono essere della stesa dimensione']); 
             end
 
             % Controlla dimensione bound
             if ~(isempty(self.ub) || isempty(self.lb)) || ...
-                    size(self.ub) ~= size(self.lb)
-
-                error(["ub e lb devono essere della stesa dimensione:", ...
-                           "ub: " + size(self.ub) ...
-                           "lb: " + size(self.lb)])
+                    any(size(self.ub) ~= size(self.lb))
+                check = false;
+                error( 'u:stuffed:it' , ["ub e lb devono essere della stesa dimensione"]);                
             end
+
+            
 
         end
         
@@ -339,7 +339,6 @@ classdef functionFit < handle
             end
 
             txt(length(self.par) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm * self.dof, nRound) + "/" + self.dof;
-            
             
             % Dinamic position
             annotation("textbox", self.box, ...
