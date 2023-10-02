@@ -23,12 +23,13 @@ classdef functionFit < handle
         name(1, 1) string
         labelx(1, 1) string
         labely(1, 1) string
-        box(1, 4) double
+        %box(1, 4) double
+        box_position (1, 2) double {mustBeReal, mustBeFinite}
         pedice(1, 1) char
         showzoom(1, 1) logical
-        zoompos(1, 4) double
-        fontsize(1, 1) double
-        ratio(1, 1) double
+        zoompos(1, 4) double {mustBeReal, mustBeFinite}
+        fontsize(1, 1) double {mustBeReal, mustBeFinite}
+        ratio(1, 1) double {mustBeReal, mustBeFinite}
     end
 
     methods
@@ -60,7 +61,8 @@ classdef functionFit < handle
             self.name = "Model"; % Titolo grafico
             self.labelx = "X Axes";
             self.labely = "Y Axes";
-            self.box = [0.55, 0.55, 0.1, 0.1]; % [x, y, w, h]
+            %self.box = [0.55, 0.55, 0.1, 0.1]; % [x, y, w, h]
+            self.box_position = [0.55, 0.55]; % [x, y]
             self.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
             self.showzoom = false; % Mostra grafico con zoom su un punto e barre incertezza
             self.zoompos = [0.21, 0.75, 0.15, 0.15]; % [x, y, w, h]
@@ -69,7 +71,7 @@ classdef functionFit < handle
         end
         
         % Genera immagine plot usando il modello dato
-        function [par, errpar, yfit, chi2norm, dof, p_value, fig] = plotFunctionFit(self, file_name)
+        function [par, errpar, yfit, chi2norm, dof, p_value, fig] = plotModelFit(self, file_name)
 
             arguments
                 self
@@ -138,8 +140,20 @@ classdef functionFit < handle
 
             data_x = self.datax;
             data_y = self.datay;
-            sigma_x = self.sigmax;
-            sigma_y = self.sigmay;
+
+            % Inizializza le sigma unitarie se non impostate
+            if (isempty(self.sigmax))
+                sigma_x = ones(size(self.datax));
+            else
+                sigma_x = self.sigmax;
+            end   
+
+            if (isempty(self.sigmay))
+                sigma_y = ones(size(self.datay));
+            else
+                sigma_y = self.sigmay;
+            end      
+           
 
             dataN = length(data_x);
             old_b = 9999999;
@@ -224,9 +238,22 @@ classdef functionFit < handle
                 tmp_lb = ones(size(self.par)) * -inf;
             else
                 tmp_lb = self.lb;
-            end
+            end         
+            
+            % Inizializza le sigma unitarie se non impostate
+            if (isempty(self.sigmax))
+                tmp_sigmax = ones(size(self.datax));
+            else
+                tmp_sigmax = self.sigmax;
+            end   
 
-            [par, resnorm, ~, ~, ~, ~, jacobian] = lsqnonlin(scarti, self.par, tmp_lb, tmp_ub, options, self.datax, self.datay, self.sigmay);
+            if (isempty(self.sigmay))
+                tmp_sigmay = ones(size(self.datay));
+            else
+                tmp_sigmay = self.sigmay;
+            end      
+
+            [par, resnorm, ~, ~, ~, ~, jacobian] = lsqnonlin(scarti, self.par, tmp_lb, tmp_ub, options, self.datax, self.datay, tmp_sigmay);
 
             %Covariance Matrix
             covar = inv(jacobian' * jacobian);
@@ -257,7 +284,7 @@ classdef functionFit < handle
             end
 
             % Controlla dimensione bound
-            if ~(isempty(self.ub) || isempty(self.lb)) || ...
+            if ~(isempty(self.ub) || isempty(self.lb)) && ...
                     any(size(self.ub) ~= size(self.lb))
                 check = false;
                 error( 'u:stuffed:it' , ["ub e lb devono essere della stesa dimensione"]);                
@@ -341,7 +368,7 @@ classdef functionFit < handle
             txt(length(self.par) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm * self.dof, nRound) + "/" + self.dof;
             
             % Dinamic position
-            annotation("textbox", self.box, ...
+            annotation("textbox", [self.box_position 0 0], ...
                 "BackgroundColor", [1, 1, 1], ...
                 "FontSize", self.fontsize, ...
                 "String", txt, ...
