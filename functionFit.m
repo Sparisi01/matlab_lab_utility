@@ -17,20 +17,28 @@ classdef functionFit < handle
         fig (1,1)  
         axes (:,1) 
         dof (1,1) double {mustBeNonnegative}
-        p_value (1,1) double {mustBeNonnegative}
+        pValue (1,1) double {mustBeNonnegative}
         toShowPar (:,1) logical
-        showChi (:,1) logical
-        nolog(1, :) logical
-        verbose(1, :) logical
-        name(1, 1) string
-        labelx(1, 1) string
-        labely(1, 1) string
-        box_position (1, 2) double {mustBeReal, mustBeFinite}
-        pedice(1, 1) char
-        showzoom(1, 1) logical
-        zoompos(1, 4) double {mustBeReal, mustBeFinite}
-        fontsize(1, 1) double {mustBeReal, mustBeFinite}
-        ratio(1, 1) double {mustBeReal, mustBeFinite}
+        showChi (1,1) logical
+        showBox (1,1) logical 
+        showScarti (1, 1) logical
+        showGrid (1, 1) logical
+        showZoom (1, 1) logical      
+        zoomPosition (1, 4) double {mustBeReal, mustBeFinite} 
+        modelColor (1, 3) double {mustBeReal, mustBeFinite}
+        dataColor (1, 3) double {mustBeReal, mustBeFinite}
+        name (1, 1) string
+        labelx (1, 1) string
+        labely (1, 1) string
+        logX (1,1) logical
+        logY (1,1) logical
+        boxPosition (1, 2) double {mustBeReal, mustBeFinite}
+        pedice (1, 1) char    
+        fontSize (1, 1) double {mustBeReal, mustBeFinite}
+        figureWidth (1, 1) double {mustBeReal, mustBeFinite}
+        figureHeight (1, 1) double {mustBeReal, mustBeFinite}
+        nolog (1, :) logical
+        verbose (1, :) logical
     end
 
     methods
@@ -53,28 +61,35 @@ classdef functionFit < handle
             self.yfit = [];
             self.chi2norm = inf;
             self.dof = 0; 
-            self.p_value = 0; 
+            self.pValue = 0; 
             self.fig = figure(); % Fig dopo aver generato figura e residui
             self.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
             % Estetica ----------------------
             self.toShowPar = []; % Scegli quali parametri mostrate e quali no con un array di bool della stessa dimensione di par
             self.showChi = 1; % Mostra o no chi quadro in legenda
+            self.showBox = 1; % Mostra o no box parametri
+            self.showScarti = 1; % Mostra o no grafico degli scarti
+            self.modelColor = [1 0 0];
+            self.dataColor = [0.00 0.45 0.74];
             self.nolog = false;
             self.verbose = false;
             self.name = "Model"; % Titolo grafico
             self.labelx = "X Axes";
-            self.labely = "Y Axes";
-            %self.box = [0.55, 0.55, 0.1, 0.1]; % [x, y, w, h]
-            self.box_position = [0.55, 0.55]; % [x, y]
+            self.labely = "Y Axes";        
+            self.logX = 0;
+            self.logY = 0;
+            self.boxPosition = [0.55, 0.55]; % [x, y]
             self.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
-            self.showzoom = false; % Mostra grafico con zoom su un punto e barre incertezza
-            self.zoompos = [0.21, 0.75, 0.15, 0.15]; % [x, y, w, h]
-            self.fontsize = 14;
-            self.ratio = 4/3;
+            self.showZoom = false; % Mostra grafico con zoom su un punto e barre incertezza
+            self.zoomPosition = [0.21, 0.75, 0.15, 0.15]; % [x, y, w, h]
+            self.showGrid = 1;
+            self.fontSize = 14;
+            self.figureWidth = 8; % Larghezza immagine salvata in pollici
+            self.figureHeight = 6; % Altezza immagine salvata in pollici
         end
         
         % Genera immagine plot usando il modello dato
-        function [par, errpar, yfit, chi2norm, dof, p_value, fig] = plotModelFit(self, file_name)
+        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotModelFit(self, file_name)
 
             arguments
                 self
@@ -82,13 +97,13 @@ classdef functionFit < handle
             end
 
             % Esegui fit lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
-            [par, errpar, yfit, chi2norm, dof, p_value] = modelFit(self);
+            [par, errpar, yfit, chi2norm, dof, pValue] = modelFit(self);
             self.par = par;
             self.errpar = errpar;
             self.chi2norm = chi2norm;
             self.yfit = yfit;
             self.dof = dof;
-            self.p_value = p_value;
+            self.pValue = pValue;
 
             % Genera Figura
             [fig, ax] = generatePlotFig(self, false);
@@ -103,7 +118,7 @@ classdef functionFit < handle
         end
 
         % Genera immagine plot usando il modello lineare
-        function [par, errpar, yfit, chi2norm, dof, p_value, fig] = plotLinearFit(self, file_name)
+        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotLinearFit(self, file_name)
 
             arguments
                 self
@@ -111,7 +126,7 @@ classdef functionFit < handle
             end
 
             % Esegui fit non lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
-            [par, errpar, yfit, chi2norm, dof, p_value] = linearFit(self);
+            [par, errpar, yfit, chi2norm, dof, pValue] = linearFit(self);
             self.par = par;
             self.errpar = errpar;
             self.chi2norm = chi2norm;
@@ -119,7 +134,7 @@ classdef functionFit < handle
             self.dof = dof;
             self.yfit = yfit;
             self.dof = dof;
-            self.p_value = p_value;
+            self.pValue = pValue;
 
             % Genera Figura
             [fig, ax] = generatePlotFig(self, true);
@@ -134,7 +149,7 @@ classdef functionFit < handle
         end
 
         % Funzione per fit lineare
-        function [par, errpar, yfit, chi2norm, dof, p_value] = linearFit(self)
+        function [par, errpar, yfit, chi2norm, dof, pValue] = linearFit(self)
 
             % Contolla validità parametri
             if ~safetyCheck(self)
@@ -214,11 +229,11 @@ classdef functionFit < handle
             errpar(2) = sigma_b;
             chi2norm = chi2 / (dataN - 2);
             dof = dataN - 2;
-            p_value = chi2cdf(chi2, dof);
+            pValue = chi2cdf(chi2, dof);
         end
 
         % Funzione per fit non lineare
-        function [par, errpar, yfit, chi2norm, dof, p_value] = modelFit(self)
+        function [par, errpar, yfit, chi2norm, dof, pValue] = modelFit(self)
 
             % Contolla validità parametri
             if ~safetyCheck(self)
@@ -272,9 +287,9 @@ classdef functionFit < handle
             chi2norm = resnorm / dof;
             errpar = sigmaf * sqrt(chi2norm);
             yfit = self.model(par, self.datax);
-            p_value = chi2cdf(resnorm, dof);
+            pValue = chi2cdf(resnorm, dof);
         end
-
+       
     end
 
     methods (Hidden)
@@ -287,14 +302,14 @@ classdef functionFit < handle
                     any(size(self.datay) ~= size(self.sigmay)) || ...
                     any(size(self.sigmax) ~= size(self.sigmay))
                 check = false;
-                error( 'u:stuffed:it' , [ 'datax, datay, sigmax. and sigmay devono essere della stesa dimensione']); 
+                error( 'u:stuffed:it' , 'datax, datay, sigmax. and sigmay devono essere della stesa dimensione'); 
             end
 
             % Controlla dimensione bound
             if ~(isempty(self.ub) || isempty(self.lb)) && ...
                     any(size(self.ub) ~= size(self.lb))
                 check = false;
-                error( 'u:stuffed:it' , ["ub e lb devono essere della stesa dimensione"]);                
+                error( 'u:stuffed:it' , "ub e lb devono essere della stesa dimensione");                
             end
 
             
@@ -304,146 +319,174 @@ classdef functionFit < handle
         function [fig, ax] = generatePlotFig(self, isLinearFit)
             
             fig = figure();
-                       
-            h = 3;
-            tiledlayout(h, 1);
+            
+            if self.showScarti
+                h = 3;
+                tiledlayout(h, 1);
+    
+                % Costruzione grafico principale
+                ax(1) = nexttile(1, [h - 1, 1]);
+            else
+                ax(1) = axes();
+            end
 
-            %tl.TileSpacing = 'tight';
-
-            % Costruzione grafico principale
-            ax(1) = nexttile(1, [h - 1, 1]);
             delta_x = max(self.datax) - min(self.datax);
             
             % Disegna la funzione con parametri ottimizzati.
             if isLinearFit
-                fplot(@(x) self.par(1) + x * self.par(2), 'Color', 'red', 'LineStyle', '-')
+                fplot(@(x) self.par(1) + x * self.par(2), 'Color', self.modelColor, 'LineStyle', '-')
             else
-                fplot(@(x) self.model(self.par, x), 'Color', 'red', 'LineStyle', '-')
+                fplot(@(x) self.model(self.par, x), 'Color', self.modelColor, 'LineStyle', '-')
             end
 
             xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
             ylim([min(self.datay) + 0.1 * min(self.datay) max(self.datay) + 0.1 * max(self.datay)]);
 
-            grid on;
-            grid minor;
+            if self.showGrid
+                    grid minor;
+            end
             hold on;
             % Plotta in punti
-            scatter(self.datax, self.datay, "MarkerEdgeColor", [0.00 0.45 0.74]);
-
-            title(self.name);
-            set(gca, 'XTickLabel', []);
+            scatter(self.datax, self.datay, "MarkerEdgeColor", self.dataColor);
+            
+            title(self.name);           
             ylabel(self.labely);
 
-            % Aggiusta array unitÃ  di misura. Se non impostate le unitÃ  di misura
-            % sono inizializzate a un vettore delle dimensioni di par
-            % formato da numeri crescenti da 1
-            if (isempty(self.units))
-                tmp_units = blanks(length(self.par));
-            else
-                tmp_units = self.units;
+            if self.logX
+                set(ax(1), 'XScale', 'log')
             end
 
-            % Aggiusta array nome parametri. Se non impostato viene inizializzato a un vettore delle
-            % dimensioni di par formato da caratteri crescenti in ordine
-            % alfabetico
-            if (isempty(self.parnames))
-                tmp_parnames = char('a' + (1:length(self.par))-1);
-            else                
-                tmp_parnames = self.parnames;
+            if self.logY
+                set(ax(1), 'YScale', 'log')
             end
             
-            if isempty(self.toShowPar)               
-                self.toShowPar = ones(size(self.par));
-            else 
-                if any(size(self.toShowPar) ~= size(self.par))
-                    self.toShowPar = ones(size(self.par));
-                    warning("Dimensione di par diversa da toShowPar.")
+            if ~self.showScarti 
+                xlabel(self.labelx);
+            else
+                set(gca, 'XTickLabel', []);
+            end
+            
+            if self.showBox
+                % Aggiusta array unitÃ  di misura. Se non impostate le unitÃ  di misura
+                % sono inizializzate a un vettore delle dimensioni di par
+                % formato da numeri crescenti da 1
+                if (isempty(self.units))
+                    tmp_units = blanks(length(self.par));
+                else
+                    tmp_units = self.units;
                 end
-            end
-            % Costruisci dinamicamente la legenda con n parametri.
-            txt = "";          
-            
-            for ii = 1:length(self.par)
-                if self.toShowPar(ii)
-                    t = numberToText(self.par(ii), self.errpar(ii));
     
-                    if (self.pedice ~= ' ')
-                        txt(length(txt) + 1) = tmp_parnames(ii) + "_{" + self.pedice + "} = " + t + tmp_units(ii);
-                    else
-                        txt(length(txt) + 1) = tmp_parnames(ii) + " = " + t + tmp_units(ii);
+                % Aggiusta array nome parametri. Se non impostato viene inizializzato a un vettore delle
+                % dimensioni di par formato da caratteri crescenti in ordine
+                % alfabetico
+                if (isempty(self.parnames))
+                    tmp_parnames = char('a' + (1:length(self.par))-1);
+                else                
+                    tmp_parnames = self.parnames;
+                end
+                
+                if isempty(self.toShowPar)               
+                    self.toShowPar = ones(size(self.par));
+                else 
+                    if any(size(self.toShowPar) ~= size(self.par))
+                        self.toShowPar = ones(size(self.par));
+                        warning("Dimensione di par diversa da toShowPar.")
                     end
                 end
+                % Costruisci dinamicamente la legenda con n parametri.
+                txt = "";          
+                
+                for ii = 1:length(self.par)
+                    if self.toShowPar(ii)
+                        t = numberToText(self.par(ii), self.errpar(ii));
+        
+                        if (self.pedice ~= ' ')
+                            txt(length(txt) + 1) = tmp_parnames(ii) + "_{" + self.pedice + "} = " + t + " " + tmp_units(ii);
+                        else
+                            txt(length(txt) + 1) = tmp_parnames(ii) + " = " + t + " " + tmp_units(ii);
+                        end
+                    end
+                end
+    
+                % Se il chi2 è minore di 2 vengono tenute 2 cifre significative
+                % sennò si arrotonda all'intero.
+                if self.chi2norm * self.dof > 2
+                    nRound = 0;
+                else
+                    nRound = 2;
+                end
+    
+                if self.showChi
+                    txt(length(txt) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm * self.dof, nRound) + "/" + self.dof;
+                end
+                
+                
+                % Dinamic position
+                annotation("textbox", [self.boxPosition 0 0], ...
+                    "BackgroundColor", [1, 1, 1], ...
+                    "fontSize", self.fontSize, ...
+                    "String", txt(2:end), ...
+                    'FitBoxToText', 'on' ...
+                );
             end
 
-            % Se il chi2 è minore di 2 vengono tenute 2 cifre significative
-            % sennò si arrotonda all'intero.
-            if self.chi2norm * self.dof > 2
-                nRound = 0;
-            else
-                nRound = 2;
+            if self.showScarti
+                % Costruzione grafico degli scarti
+                ax(2) = nexttile([1 1]);
+                
+                scarto_y = self.datay - self.yfit;
+    
+                % Costruisci incertezza totale proiettando le incertezze su x
+                % attraverso le derivate del modello.
+                if isLinearFit
+                    sigmaScarti = sqrt(self.sigmay .^ 2 + (self.par(2) * self.sigmax) .^ 2);
+                else
+                    sigmaScarti = self.sigmay;
+                end
+    
+                e2 = errorbar(self.datax, scarto_y, sigmaScarti);
+                e2.LineStyle = 'none';
+                xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
+                ylim([-max(scarto_y .* 2) - max(sigmaScarti) max(scarto_y .* 2) + max(sigmaScarti)]);
+                x = [min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x];
+                y = [0 0];
+                line(x, y, 'Color', self.modelColor, 'LineStyle', '-')
+                if self.showGrid
+                    grid minor;
+                end
+                hold on;
+                scatter(self.datax, scarto_y, "MarkerEdgeColor", self.dataColor);
+    
+                % title("Residui da modello lineare", "fontSize", self.fontSize);
+                ylabel("Residui");
+                xlabel(self.labelx);
+
+                if self.logX
+                    set(ax(2), 'XScale', 'log')
+                end
             end
 
-            if self.showChi
-                txt(length(txt) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm * self.dof, nRound) + "/" + self.dof;
-            end
-
-            % Dinamic position
-            annotation("textbox", [self.box_position 0 0], ...
-                "BackgroundColor", [1, 1, 1], ...
-                "FontSize", self.fontsize, ...
-                "String", txt(2:end), ...
-                'FitBoxToText', 'on' ...
-            );
-            
-            % Costruzione grafico degli scarti
-            ax(2) = nexttile([1 1]);
-            
-            scarto_y = self.datay - self.yfit;
-
-            % Costruisci incertezza totale proiettando le incertezze su x
-            % attraverso le derivate del modello.
-            if isLinearFit
-                sigmaScarti = sqrt(self.sigmay .^ 2 + (self.par(2) * self.sigmax) .^ 2);
-            else
-                sigmaScarti = self.sigmay;
-            end
-
-            e2 = errorbar(self.datax, scarto_y, sigmaScarti);
-            e2.LineStyle = 'none';
-            xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
-            ylim([-max(scarto_y .* 2) - max(sigmaScarti) max(scarto_y .* 2) + max(sigmaScarti)]);
-            x = [min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x];
-            y = [0 0];
-            line(x, y, 'Color', 'red', 'LineStyle', '-')
-            grid on;
-            grid minor;
-            hold on;
-            scatter(self.datax, scarto_y, "MarkerEdgeColor", [0.00 0.45 0.74]);
-
-            % title("Residui da modello lineare", "FontSize", self.fontsize);
-            ylabel("Residui");
-            xlabel(self.labelx);
-            
             % Costruisci grafico zoom errori su un punto
             % Sono mostrati sia gli errori su x che y
-            if (self.showzoom)
+            if (self.showZoom)
                 hold on;
                 id = round(length(self.datax) / 2);
                 x = self.datax(id);
                 y = self.datay(id);               
-                axes("Position", self.zoompos);
+                axes("Position", self.zoomPosition);
                 errorbar(x, y, -self.sigmay(id), self.sigmay(id), -self.sigmax(id), self.sigmax(id), 'o');
                 xlim([(x - self.sigmax(id) * 1.5) (x + self.sigmax(id) * 1.5)]);
                 ylim([(y - self.sigmay(id) * 1.5) (y + self.sigmay(id) * 1.5)]);
-                grid on;
-                grid minor;
+                if self.showGrid
+                    grid minor;
+                end               
             end
             
             % Imposta dimensione font per ogni asse.
             % Richiesto perchè il tiled layout lavora con due assi
             % differenti
             for a = 1:length(ax)      
-                 set(ax(a), "FontSize", self.fontsize);
+                 set(ax(a), "fontSize", self.fontSize);
             end
             
         end
@@ -453,17 +496,15 @@ classdef functionFit < handle
             
             % Imposta dimensione font per ogni asse
             for a = image_axes 
-                 set(a, "FontSize", self.fontsize);
+                 set(a, "fontSize", self.fontSize);
             end
 
-            image_width = 8; % 8 inches
-            image_height = 6; % 6 inches -> ratio 4:3
             set(image_figure, 'PaperUnits', 'inches');
-            set(image_figure, 'PaperSize', [image_width image_height]);
+            set(image_figure, 'PaperSize', [self.figureWidth self.figureHight]);
 
             set(image_figure, 'InvertHardcopy', 'on');
             set(image_figure, 'PaperUnits', 'inches');
-            set(image_figure, 'PaperPosition', [0, 0, image_width, image_height]);
+            set(image_figure, 'PaperPosition', [0, 0, self.figureWidth, self.figureHight]);
 
             % Salva file come PNG
             print(image_name, '-dpng', '-r300');
