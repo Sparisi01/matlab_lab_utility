@@ -14,16 +14,17 @@ classdef functionFit < handle
         parnames (:, 1) string
         yfit (:,1) double {mustBeReal, mustBeFinite}
         chi2norm (1,1) double {mustBeNonnegative}
-        fig (1,1)
+        fig (1,1)  
         axes (:,1) 
         dof (1,1) double {mustBeNonnegative}
         p_value (1,1) double {mustBeNonnegative}
+        toShowPar (:,1) logical
+        showChi (:,1) logical
         nolog(1, :) logical
         verbose(1, :) logical
         name(1, 1) string
         labelx(1, 1) string
         labely(1, 1) string
-        %box(1, 4) double
         box_position (1, 2) double {mustBeReal, mustBeFinite}
         pedice(1, 1) char
         showzoom(1, 1) logical
@@ -53,9 +54,11 @@ classdef functionFit < handle
             self.chi2norm = inf;
             self.dof = 0; 
             self.p_value = 0; 
-            self.fig = figure();
-            self.axes = [];
+            self.fig = figure(); % Fig dopo aver generato figura e residui
+            self.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
             % Estetica ----------------------
+            self.toShowPar = []; % Scegli quali parametri mostrate e quali no con un array di bool della stessa dimensione di par
+            self.showChi = 1; % Mostra o no chi quadro in legenda
             self.nolog = false;
             self.verbose = false;
             self.name = "Model"; % Titolo grafico
@@ -144,12 +147,14 @@ classdef functionFit < handle
             % Inizializza le sigma unitarie se non impostate
             if (isempty(self.sigmax))
                 sigma_x = ones(size(self.datax));
+                warning("Incertezze su datax non assegnate.")
             else
                 sigma_x = self.sigmax;
             end   
 
-            if (isempty(self.sigmay))
+            if (isempty(self.sigmay))            
                 sigma_y = ones(size(self.datay));
+                warning("Incertezze su datay non assegnate.")
             else
                 sigma_y = self.sigmay;
             end      
@@ -243,12 +248,14 @@ classdef functionFit < handle
             % Inizializza le sigma unitarie se non impostate
             if (isempty(self.sigmax))
                 tmp_sigmax = ones(size(self.datax));
+                warning("Incertezze su datax non assegnate.")
             else
                 tmp_sigmax = self.sigmax;
             end   
 
             if (isempty(self.sigmay))
                 tmp_sigmay = ones(size(self.datay));
+                warning("Incertezze su datay non assegnate.")
             else
                 tmp_sigmay = self.sigmay;
             end      
@@ -315,6 +322,8 @@ classdef functionFit < handle
             end
 
             xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
+            ylim([min(self.datay) + 0.1 * min(self.datay) max(self.datay) + 0.1 * max(self.datay)]);
+
             grid on;
             grid minor;
             hold on;
@@ -339,22 +348,31 @@ classdef functionFit < handle
             % alfabetico
             if (isempty(self.parnames))
                 tmp_parnames = char('a' + (1:length(self.par))-1);
-            else
+            else                
                 tmp_parnames = self.parnames;
             end
-
-            % Costruisci dinamicamente la legenda con n parametri.
-            txt = "";           
-
-            for ii = 1:length(self.par)
-                t = numberToText(self.par(ii), self.errpar(ii));
-
-                if (self.pedice ~= ' ')
-                    txt(ii) = tmp_parnames(ii) + "_{" + self.pedice + "} = " + t + tmp_units(ii);
-                else
-                    txt(ii) = tmp_parnames(ii) + " = " + t + tmp_units(ii);
+            
+            if isempty(self.toShowPar)               
+                self.toShowPar = ones(size(self.par));
+            else 
+                if any(size(self.toShowPar) ~= size(self.par))
+                    self.toShowPar = ones(size(self.par));
+                    warning("Dimensione di par diversa da toShowPar.")
                 end
-
+            end
+            % Costruisci dinamicamente la legenda con n parametri.
+            txt = "";          
+            
+            for ii = 1:length(self.par)
+                if self.toShowPar(ii)
+                    t = numberToText(self.par(ii), self.errpar(ii));
+    
+                    if (self.pedice ~= ' ')
+                        txt(length(txt) + 1) = tmp_parnames(ii) + "_{" + self.pedice + "} = " + t + tmp_units(ii);
+                    else
+                        txt(length(txt) + 1) = tmp_parnames(ii) + " = " + t + tmp_units(ii);
+                    end
+                end
             end
 
             % Se il chi2 è minore di 2 vengono tenute 2 cifre significative
@@ -365,13 +383,15 @@ classdef functionFit < handle
                 nRound = 2;
             end
 
-            txt(length(self.par) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm * self.dof, nRound) + "/" + self.dof;
-            
+            if self.showChi
+                txt(length(txt) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm * self.dof, nRound) + "/" + self.dof;
+            end
+
             % Dinamic position
             annotation("textbox", [self.box_position 0 0], ...
                 "BackgroundColor", [1, 1, 1], ...
                 "FontSize", self.fontsize, ...
-                "String", txt, ...
+                "String", txt(2:end), ...
                 'FitBoxToText', 'on' ...
             );
             
