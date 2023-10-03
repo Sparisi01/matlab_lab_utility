@@ -28,21 +28,25 @@ classdef functionFit < handle
         modelColor (1, 3) double {mustBeReal, mustBeFinite}
         dataColor (1, 3) double {mustBeReal, mustBeFinite}
         name (1, 1) string
-        labelx (1, 1) string
+        labelx (1, 1) string        
         labely (1, 1) string
+        reslabely (1, 1) string
         logX (1,1) logical
         logY (1,1) logical
+        xlim (1,2) double {mustBeReal, mustBeFinite}
+        ylim (1,2) double {mustBeReal, mustBeFinite}
+        resylim (1,2) double {mustBeReal, mustBeFinite}
         boxPosition (1, 2) double {mustBeReal, mustBeFinite}
         pedice (1, 1) char    
         fontSize (1, 1) double {mustBeReal, mustBeFinite}
         figureWidth (1, 1) double {mustBeReal, mustBeFinite}
         figureHeight (1, 1) double {mustBeReal, mustBeFinite}
-        nolog (1, :) logical
         verbose (1, :) logical
     end
 
     methods
         
+        % Valori di default per le opzioni
         function self = functionFit()
             % Dati --------------------------
             self.datax = [];
@@ -50,14 +54,15 @@ classdef functionFit < handle
             self.sigmax = [];
             self.sigmay = [];
             % Parametri modello -------------
-            self.model = @(par, x) par(1) + x * par(2); % Modello su cui fittare
+            self.model = @(par, x) par(1) + x * par(2); % Modello su cui eseguire il fit
             self.par = []; % Valore dei parametri
             self.errpar = []; % Errore dei parametri
             self.ub = []; % UpperBound parametri
             self.lb = []; % LowerBound parametri
             self.units = []; % Units for parameters in legend box
             self.parnames = []; % Parameters name in legend box
-            % Risultati fit -----------------
+            % Qesti parametri vengono riempiti DOPO aver eseguito un fit e
+            % ne contengono i risultati
             self.yfit = [];
             self.chi2norm = inf;
             self.dof = 0; 
@@ -65,25 +70,28 @@ classdef functionFit < handle
             self.fig = figure(); % Fig dopo aver generato figura e residui
             self.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
             % Estetica ----------------------
-            self.toShowPar = []; % Scegli quali parametri mostrate e quali no con un array di bool della stessa dimensione di par
+            self.toShowPar = [1 1]; % Scegli quali parametri mostrate e quali no con un array di bool della stessa dimensione di par
             self.showChi = 1; % Mostra o no chi quadro in legenda
             self.showBox = 1; % Mostra o no box parametri
             self.showScarti = 1; % Mostra o no grafico degli scarti
             self.modelColor = [1 0 0];
             self.dataColor = [0.00 0.45 0.74];
-            self.nolog = false;
+            self.xlim = [0 0]; % Xlim, se uguali o in ordine sbagliato viene impostato in automatico
+            self.ylim = [0 0]; % Ylim, se uguali o in ordine sbagliato viene impostato in automatico
+            self.resylim = [0 0]; % Ylim residui, se uguali o in ordine sbagliato viene impostato in automatico
             self.verbose = false;
             self.name = "Model"; % Titolo grafico
-            self.labelx = "X Axes";
-            self.labely = "Y Axes";        
-            self.logX = 0;
-            self.logY = 0;
-            self.boxPosition = [0.55, 0.55]; % [x, y]
+            self.labelx = "X Axes"; 
+            self.labely = "Y Axes";  
+            self.reslabely = "Scarti"; 
+            self.logX = 0; % Asse X logaritmico (per entrambi i grafici)
+            self.logY = 0;  % Asse Y logaritmico 
+            self.boxPosition = [0.55, 0.55]; % [x, y] la dimensione di aggiusta in automatico
             self.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
             self.showZoom = false; % Mostra grafico con zoom su un punto e barre incertezza
             self.zoomPosition = [0.21, 0.75, 0.15, 0.15]; % [x, y, w, h]
-            self.showGrid = 1;
-            self.fontSize = 14;
+            self.showGrid = 1; % Mostra griglia minor sui grafici
+            self.fontSize = 14; % Dimensione font sia nelle label che nella box
             self.figureWidth = 8; % Larghezza immagine salvata in pollici
             self.figureHeight = 6; % Altezza immagine salvata in pollici
         end
@@ -233,14 +241,14 @@ classdef functionFit < handle
         end
 
         % Funzione per fit non lineare
-        function [par, errpar, yfit, chi2norm, dof, pValue] = modelFit(self)
+        function [par, errpar, yfit, chi2norm, dof, pValue, flag] = modelFit(self)
 
             % Contolla validità parametri
             if ~safetyCheck(self)
                 return
             end
 
-            options = optimset('lsqnonlin');
+            
 
             % Definizione funzione scarti a partire dal modello
             scarti = @(par, xd, yd, ed) (self.model(par, xd) - yd) ./ ed;
@@ -275,7 +283,13 @@ classdef functionFit < handle
                 tmp_sigmay = self.sigmay;
             end      
 
-            [par, resnorm, ~, ~, ~, ~, jacobian] = lsqnonlin(scarti, self.par, tmp_lb, tmp_ub, options, self.datax, self.datay, tmp_sigmay);
+            if self.verbose
+                options = optimoptions('lsqnonlin');
+            else
+                options = optimoptions('lsqnonlin','Display','none');
+            end
+
+            [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, self.par, tmp_lb, tmp_ub, options, self.datax, self.datay, tmp_sigmay);
 
             %Covariance Matrix
             covar = inv(jacobian' * jacobian);
@@ -338,9 +352,18 @@ classdef functionFit < handle
             else
                 fplot(@(x) self.model(self.par, x), 'Color', self.modelColor, 'LineStyle', '-')
             end
-
-            xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
-            ylim([min(self.datay) + 0.1 * min(self.datay) max(self.datay) + 0.1 * max(self.datay)]);
+            
+            % Imposta dinamicamente i limiti 
+            if self.xlim(1) >= self.xlim(2)
+                xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
+            else
+                xlim([self.xlim(1) self.xlim(2)]);
+            end
+            if self.ylim(1) >= self.ylim(2)
+                ylim([min(self.datay) + 0.1 * min(self.datay) max(self.datay) + 0.1 * max(self.datay)]);        
+            else
+                ylim([self.ylim(1) self.ylim(2)]);
+            end
 
             if self.showGrid
                     grid minor;
@@ -446,8 +469,21 @@ classdef functionFit < handle
     
                 e2 = errorbar(self.datax, scarto_y, sigmaScarti);
                 e2.LineStyle = 'none';
-                xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
-                ylim([-max(scarto_y .* 2) - max(sigmaScarti) max(scarto_y .* 2) + max(sigmaScarti)]);
+
+                % Imposta dinamicamente i limiti 
+                if self.xlim(1) >= self.xlim(2)
+                    xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
+                else
+                    xlim([self.xlim(1) self.xlim(2)]);
+                end
+                
+                if self.resylim(1) >= self.resylim(2)
+                    ylim([-max(scarto_y .* 2) - max(sigmaScarti) max(scarto_y .* 2) + max(sigmaScarti)]);
+                else
+                    ylim([self.resylim(1) self.resylim(2)])
+                end
+               
+                
                 x = [min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x];
                 y = [0 0];
                 line(x, y, 'Color', self.modelColor, 'LineStyle', '-')
@@ -456,9 +492,8 @@ classdef functionFit < handle
                 end
                 hold on;
                 scatter(self.datax, scarto_y, "MarkerEdgeColor", self.dataColor);
-    
-                % title("Residui da modello lineare", "fontSize", self.fontSize);
-                ylabel("Residui");
+                    
+                ylabel(self.reslabely);
                 xlabel(self.labelx);
 
                 if self.logX
