@@ -6,10 +6,11 @@ classdef functionFit < handle
         sigmax (:, 1) double {mustBeReal, mustBeFinite}
         sigmay (:, 1) double {mustBeReal, mustBeFinite}
         model (1, 1)
-        par (:, 1) double {mustBeReal, mustBeFinite}
+        par (:, 1) double {mustBeFinite}
         errpar (:, 1) double
-        ub (:, 1) double
-        lb (:, 1) double
+        previousPar (:, 1) double {mustBeFinite}
+        upperBounds (:, 1) double
+        lowerBounds (:, 1) double
         units (:, 1) string
         parnames (:, 1) string
         yfit (:, 1) double {mustBeReal, mustBeFinite}
@@ -26,6 +27,7 @@ classdef functionFit < handle
         showScarti (1, 1) logical
         showGrid (1, 1) logical
         showZoom (1, 1) logical
+        showInitialParModel (1,1) logical 
         zoomPosition (1, 4) double {mustBeReal, mustBeFinite}
         modelColor (1, 3) double {mustBeReal, mustBeFinite}
         modelLineStyle (1, 1) string
@@ -59,9 +61,10 @@ classdef functionFit < handle
             % Parametri modello -------------
             self.model = @(par, x) par(1) + x * par(2); % Modello su cui eseguire il fit
             self.par = []; % Valore dei parametri
+            self.previousPar = []; % Valore dei parametri
             self.errpar = []; % Errore dei parametri
-            self.ub = []; % UpperBound parametri
-            self.lb = []; % LowerBound parametri
+            self.upperBounds = []; % UpperBound parametri
+            self.lowerBounds = []; % LowerBound parametri
             self.units = []; % Units for parameters in legend box
             self.parnames = []; % Parameters name in legend box
             % Qesti parametri vengono riempiti DOPO aver eseguito un fit e
@@ -79,6 +82,7 @@ classdef functionFit < handle
             self.showPValue = 0; % Mostra PValue
             self.showBox = 1; % Mostra o no box parametri
             self.showScarti = 1; % Mostra o no grafico degli scarti
+            self.showInitialParModel = 0;
             self.modelColor = [1 0 0];
             self.modelLineStyle = '-';
             self.dataColor = [0.00 0.45 0.74];
@@ -109,15 +113,12 @@ classdef functionFit < handle
                 self
                 file_name (1, 1) string = ""
             end
-
+            
+            self.previousPar = self.par;
             % Esegui fit lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
             [par, errpar, yfit, chi2norm, dof, pValue] = modelFit(self);
-            self.par = par;
-            self.errpar = errpar;
-            self.chi2norm = chi2norm;
-            self.yfit = yfit;
-            self.dof = dof;
-            self.pValue = pValue;
+            
+            
 
             % Genera Figura
             [fig, ax] = generatePlotFig(self, false);
@@ -138,18 +139,13 @@ classdef functionFit < handle
                 self
                 file_name (1, 1) string = ""
             end
-
+            
+            self.previousPar = self.par;
             % Esegui fit non lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
             [par, errpar, yfit, chi2norm, dof, pValue] = linearFit(self);
-            self.par = par;
-            self.errpar = errpar;
-            self.chi2norm = chi2norm;
-            self.yfit = yfit;
-            self.dof = dof;
-            self.yfit = yfit;
-            self.dof = dof;
-            self.pValue = pValue;
-
+            
+            
+            
             % Genera Figura
             [fig, ax] = generatePlotFig(self, true);
             self.fig = fig;
@@ -232,7 +228,8 @@ classdef functionFit < handle
             % Test del chi quadro
             sigma_tot = sqrt(sigma_y .^ 2 + (b * sigma_x) .^ 2);
             chi2 = sum((data_y - data_x * b - a) .^ 2 ./ (sigma_tot .^ 2));
-
+            
+            % Results
             yfit = data_x * b + a;
             par(1) = a;
             par(2) = b;
@@ -241,6 +238,14 @@ classdef functionFit < handle
             chi2norm = chi2 / (dataN - 2);
             dof = dataN - 2;
             pValue = chi2cdf(chi2, dof);
+            
+            self.par = par;
+            self.errpar = errpar;
+            self.chi2norm = chi2norm;
+            self.yfit = yfit;
+            self.dof = dof;
+            self.pValue = pValue;
+
         end
 
         % Funzione per fit non lineare
@@ -255,16 +260,16 @@ classdef functionFit < handle
             % Aggiusta dimensioni upper e lower bound. Se non impostate
             % vengono inizializzati a due vettori delle dimensione di par a
             % valori + e - inf
-            if (isempty(self.ub))
+            if (isempty(self.upperBounds))
                 tmp_ub = ones(size(self.par)) * inf;
             else
-                tmp_ub = self.ub;
+                tmp_ub = self.upperBounds;
             end
 
-            if (isempty(self.lb))
+            if (isempty(self.lowerBounds))
                 tmp_lb = ones(size(self.par)) * -inf;
             else
-                tmp_lb = self.lb;
+                tmp_lb = self.lowerBounds;
             end
 
             % Inizializza le sigma unitarie se non impostate
@@ -272,6 +277,9 @@ classdef functionFit < handle
                 tmp_sigmax = ones(size(self.datax));
                 warning("Incertezze su datax non assegnate.")
             else
+                if size(self.sigmay) == [1,1]
+                    self.sigmax = ones(size(self.datax)) * self.sigmax;
+                end
                 tmp_sigmax = self.sigmax;
             end
 
@@ -279,7 +287,10 @@ classdef functionFit < handle
                 tmp_sigmay = ones(size(self.datay));
                 warning("Incertezze su datay non assegnate.")
             else
-                tmp_sigmay = self.sigmay;
+                if size(self.sigmay) == [1,1]
+                    self.sigmay = ones(size(self.datay)) * self.sigmay;
+                end
+                tmp_sigmay = self.sigmay;               
             end
 
             if self.verbose
@@ -289,18 +300,28 @@ classdef functionFit < handle
             end
 
             [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, self.par, tmp_lb, tmp_ub, options, self.datax, self.datay, tmp_sigmay);
-
+            
+            
             %Covariance Matrix
             covar = inv(jacobian' * jacobian);
             %Variance
             var = diag(covar);
             sigma = sqrt(var);
             sigmaf = full(sigma);
+
+            % Results
             dof = (length(self.datax) - length(par));
             chi2norm = resnorm / dof;
             errpar = sigmaf * sqrt(chi2norm);
             yfit = self.model(par, self.datax);
-            pValue = chi2cdf(resnorm, dof);
+            pValue = chi2cdf(resnorm, dof);    
+
+            self.par = par;
+            self.errpar = errpar;
+            self.chi2norm = chi2norm;
+            self.yfit = yfit;
+            self.dof = dof;
+            self.pValue = pValue;
         end
 
     end
@@ -309,18 +330,15 @@ classdef functionFit < handle
 
         % Fa tante cose belle
         function safetyCheck(self)
-            check = true;
+            
             % Controlla dimensione dati
-            if any(size(self.datay) ~= size(self.datax)) || ...
-                    any(size(self.datay) ~= size(self.sigmay)) || ...
-                    any(size(self.sigmax) ~= size(self.sigmay))
-
-                error('u:stuffed:it', 'datax, datay, sigmax. and sigmay devono essere della stesa dimensione');
+            if any(size(self.datay) ~= size(self.datax))                   
+                error('u:stuffed:it', 'datax, datay devono essere della stesa dimensione');
             end
 
             % Controlla dimensione bound
-            if ~(isempty(self.ub) || isempty(self.lb)) && ...
-                    any(size(self.ub) ~= size(self.lb))
+            if ~(isempty(self.upperBounds) || isempty(self.lowerBounds)) && ...
+                    any(size(self.upperBounds) ~= size(self.lowerBounds))
 
                 error('u:stuffed:it', "ub e lb devono essere della stesa dimensione");
             end
@@ -341,13 +359,22 @@ classdef functionFit < handle
                 ax(1) = axes();
             end
 
-            delta_x = max(self.datax) - min(self.datax);
+            delta_x = abs(max(self.datax) - min(self.datax));
 
             % Disegna la funzione con parametri ottimizzati.
+            
             if isLinearFit
                 fplot(@(x) self.par(1) + x * self.par(2), 'Color', self.modelColor, 'LineStyle', self.modelLineStyle)
+                if self.showInitialParModel
+                    hold on;
+                    fplot(@(x) self.previousPar(1) + x * self.previousPar(2), 'Color', 'k', 'LineStyle', self.modelLineStyle)
+                end             
             else
                 fplot(@(x) self.model(self.par, x), 'Color', self.modelColor, 'LineStyle', self.modelLineStyle)
+                if self.showInitialParModel
+                    hold on;
+                    fplot(@(x) self.model(self.previousPar, x), 'Color', 'k', 'LineStyle', self.modelLineStyle)
+                end
             end
 
             % Imposta dinamicamente i limiti
@@ -358,7 +385,7 @@ classdef functionFit < handle
             end
 
             if self.ylim(1) >= self.ylim(2)
-                ylim([min(self.datay) + 0.1 * min(self.datay) max(self.datay) + 0.1 * max(self.datay)]);
+                ylim([min(self.datay) - 0.1 * abs(min(self.datay)) max(self.datay) + 0.1 *abs(max(self.datay))]);
             else
                 ylim([self.ylim(1) self.ylim(2)]);
             end
@@ -410,12 +437,10 @@ classdef functionFit < handle
                 if isempty(self.toShowPar)
                     self.toShowPar = ones(size(self.par));
                 else
-
                     if any(size(self.toShowPar) ~= size(self.par))
                         self.toShowPar = ones(size(self.par));
                         warning("Dimensione di par diversa da toShowPar.")
                     end
-
                 end
 
                 % Costruisci dinamicamente la legenda con n parametri.
