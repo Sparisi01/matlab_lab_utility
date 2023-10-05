@@ -56,8 +56,12 @@ classdef functionFit < handle
             % Dati --------------------------
             self.datax = [];
             self.datay = [];
+            % Se le incertezze non vengono definite vengono inizializzate a
+            % un vettore unitario, Se viene passato uno scalare la stessa
+            % incertezza viene applicata a ogni punto.
             self.sigmax = [];
             self.sigmay = [];
+
             % Parametri modello -------------
             self.model = @(par, x) par(1) + x * par(2); % Modello su cui eseguire il fit
             self.par = []; % Valore dei parametri
@@ -67,14 +71,15 @@ classdef functionFit < handle
             self.lowerBounds = []; % LowerBound parametri
             self.units = []; % Units for parameters in legend box
             self.parnames = []; % Parameters name in legend box
-            % Qesti parametri vengono riempiti DOPO aver eseguito un fit e
-            % ne contengono i risultati
+            
+            % Risultati fit  ----------------
             self.yfit = [];
             self.chi2norm = inf;
             self.dof = 0;
             self.pValue = 0;
             self.fig = figure(); % Fig dopo aver generato figura e residui
             self.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
+            
             % Estetica ----------------------
             self.toShowPar = [1 1]; % Scegli quali parametri mostrate e quali no con un array di bool della stessa dimensione di par
             self.showChi = 1; % Mostra o no chi quadro in legenda
@@ -93,7 +98,7 @@ classdef functionFit < handle
             self.name = "Model"; % Titolo grafico
             self.labelx = "X Axes";
             self.labely = "Y Axes";
-            self.reslabely = "Scarti";
+            self.reslabely = "Scarti"; % Label y scarti
             self.logX = 0; % Asse X logaritmico (per entrambi i grafici)
             self.logY = 0; % Asse Y logaritmico
             self.boxPosition = [0.55, 0.55]; % [x, y] la dimensione di aggiusta in automatico
