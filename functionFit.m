@@ -19,7 +19,8 @@ classdef functionFit < handle
         axes (:, 1)
         dof (1, 1) double {mustBeNonnegative}
         pValue (1, 1) double {mustBeNonnegative}
-        toShowPar (:, 1) logical
+        showParArray (:, 1) logical
+        showDataArray (:, 1) logical
         showChi (1, 1) logical
         showChiNorm (1, 1) logical
         showPValue (1, 1) logical
@@ -28,6 +29,7 @@ classdef functionFit < handle
         showGrid (1, 1) logical
         showZoom (1, 1) logical
         showInitialParModel (1,1) logical 
+        showModel (1,1) logical
         zoomPosition (1, 4) double {mustBeReal, mustBeFinite}
         modelColor (1, 3) double {mustBeReal, mustBeFinite}
         modelLineStyle (1, 1) string
@@ -81,16 +83,19 @@ classdef functionFit < handle
             self.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
             
             % Estetica ----------------------
-            self.toShowPar = [1 1]; % Scegli quali parametri mostrate e quali no con un array di bool della stessa dimensione di par
+            self.showParArray = [1 1]; % Scegli quali parametri mostrate con un array di bool della stessa dimensione di par
+            self.showDataArray = []; % Scegli quali dati mostrate con un array di bool della stessa dimensione dei dati. I dati non mostrati in grafico contribuiscono comunque al fit
             self.showChi = 1; % Mostra o no chi quadro in legenda
             self.showChiNorm = 0; % Mostra chi2normalizzato
             self.showPValue = 0; % Mostra PValue
             self.showBox = 1; % Mostra o no box parametri
             self.showScarti = 1; % Mostra o no grafico degli scarti
-            self.showInitialParModel = 0;
-            self.modelColor = [1 0 0];
+            self.showInitialParModel = 0; % Mostra modello con parametri iniziali su grafico
+            self.showModel = 1; % Mostra modello sul grafico
+            self.modelColor = [1 0 0]; % Colore linea modello
             self.modelLineStyle = '-';
-            self.dataColor = [0.00 0.45 0.74];
+            %self.dataColor = [0.00 0.45 0.74]; % Colore dati
+            self.dataColor = [0.00 0.00 1.00]; % Colore dati
             self.xlim = [0 0]; % Xlim, se uguali o in ordine sbagliato viene impostato in automatico
             self.ylim = [0 0]; % Ylim, se uguali o in ordine sbagliato viene impostato in automatico
             self.resylim = [0 0]; % Ylim residui, se uguali o in ordine sbagliato viene impostato in automatico
@@ -171,21 +176,23 @@ classdef functionFit < handle
 
             data_x = self.datax;
             data_y = self.datay;
+            sigma_x = self.sigmax;
+            sigma_y = self.sigmay;
 
             % Inizializza le sigma unitarie se non impostate
-            if (isempty(self.sigmax))
-                sigma_x = ones(size(self.datax));
-                warning("Incertezze su datax non assegnate.")
-            else
-                sigma_x = self.sigmax;
-            end
+            %if (isempty(self.sigmax))
+            %    sigma_x = max([0.01*max(data_x)*ones(size(data_x)), 0.01*data_x],[],2);
+            %    warning("Incertezze su datax non assegnate. Inizializzate all'1%")
+            %else
+            %    sigma_x = self.sigmax;
+            %end
 
-            if (isempty(self.sigmay))
-                sigma_y = ones(size(self.datay));
-                warning("Incertezze su datay non assegnate.")
-            else
-                sigma_y = self.sigmay;
-            end
+            %if (isempty(self.sigmay))
+            %    sigma_y = max([0.01*max(data_y)*ones(size(data_y)), 0.01*data_y],[],2);
+            %    warning("Incertezze su datay non assegnate. Inizializzate all'1%")
+            %else
+            %    sigma_y = self.sigmay;
+            %end
 
             dataN = length(data_x);
             old_b = 9999999;
@@ -276,35 +283,34 @@ classdef functionFit < handle
             else
                 tmp_lb = self.lowerBounds;
             end
+            
+            %if (isempty(self.sigmax))
+            %    tmp_sigmax = max([0.01*max(self.datax)*ones(size(self.datax)), 0.01*self.datax],[],2);
+            %    warning("Incertezze su datax non assegnate. Inizializzate all'1%")
+            %else
+            %    if size(self.sigmay) == [1,1]
+            %        self.sigmax = ones(size(self.datax)) * self.sigmax;
+            %    end
+            %    tmp_sigmax = self.sigmax;
+            %end
 
-            % Inizializza le sigma unitarie se non impostate
-            if (isempty(self.sigmax))
-                tmp_sigmax = ones(size(self.datax));
-                warning("Incertezze su datax non assegnate.")
-            else
-                if size(self.sigmay) == [1,1]
-                    self.sigmax = ones(size(self.datax)) * self.sigmax;
-                end
-                tmp_sigmax = self.sigmax;
-            end
-
-            if (isempty(self.sigmay))
-                tmp_sigmay = ones(size(self.datay));
-                warning("Incertezze su datay non assegnate.")
-            else
-                if size(self.sigmay) == [1,1]
-                    self.sigmay = ones(size(self.datay)) * self.sigmay;
-                end
-                tmp_sigmay = self.sigmay;               
-            end
+            % if (isempty(self.sigmay))
+            %     tmp_sigmay = max([0.01*max(self.datay)*ones(size(self.datay)), 0.01*self.datay],[],2);
+            %     warning("Incertezze su datay non assegnate. Inizializzate all'1%")
+            % else
+            %     if size(self.sigmay) == [1,1]
+            %         self.sigmay = ones(size(self.datay)) * self.sigmay;
+            %     end
+            %     tmp_sigmay = self.sigmay;               
+            % end
 
             if self.verbose
                 options = optimoptions('lsqnonlin');
             else
-                options = optimoptions('lsqnonlin', 'Display', 'none');
+                 options = optimoptions('lsqnonlin', 'Display', 'none');
             end
 
-            [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, self.par, tmp_lb, tmp_ub, options, self.datax, self.datay, tmp_sigmay);
+            [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, self.par, tmp_lb, tmp_ub, options, self.datax, self.datay, self.sigmay);
             
             
             %Covariance Matrix
@@ -347,7 +353,25 @@ classdef functionFit < handle
 
                 error('u:stuffed:it', "ub e lb devono essere della stesa dimensione");
             end
+            
+            % Controlla dimensione incertezze
+            if (isempty(self.sigmax))
+                self.sigmax = max([0.01*max(self.datax)*ones(size(self.datax)), 0.01*self.datax],[],2);
+                warning("Incertezze su datax non assegnate. Inizializzate all'1%")           
+            else
+                if size(self.sigmax) == [1,1]
+                    self.sigmax = ones(size(self.datax)) * self.sigmax;
+                end                
+            end
 
+            if (isempty(self.sigmay))
+                self.sigmay = max([0.01*max(self.datay)*ones(size(self.datay)), 0.01*self.datay],[],2);
+                warning("Incertezze su datay non assegnate. Inizializzate all'1%")        
+            else
+                if size(self.sigmay) == [1,1]
+                    self.sigmay = ones(size(self.datay)) * self.sigmay;
+                end 
+            end
         end
 
         function [fig, ax] = generatePlotFig(self, isLinearFit)
@@ -365,20 +389,36 @@ classdef functionFit < handle
             end
 
             delta_x = abs(max(self.datax) - min(self.datax));
+            hold on
+            box on
 
-            % Disegna la funzione con parametri ottimizzati.
+            if (isempty(self.showDataArray))
+                self.showDataArray = ones(size(self.datax));
+            else
+                if size(self.showDataArray) ~= size(self.datax)
+                    error('u:stuffed:it', "showDataArray e datax, datay devono essere della stessa dimensione.");
+                end
+            end
+
+            scatter(self.datax.*self.showDataArray, self.datay.*self.showDataArray, "MarkerEdgeColor", self.dataColor);
             
+            
+            % Disegna la funzione con parametri ottimizzati e parametri iniziali     
             if isLinearFit
-                fplot(@(x) self.par(1) + x * self.par(2), 'Color', self.modelColor, 'LineStyle', self.modelLineStyle)
+                if self.showModel
+                    fplot(@(x) self.par(1) + x * self.par(2), 'Color', self.modelColor, 'LineStyle', self.modelLineStyle);
+                end
                 if self.showInitialParModel
                     hold on;
-                    fplot(@(x) self.previousPar(1) + x * self.previousPar(2), 'Color', 'k', 'LineStyle', self.modelLineStyle)
+                    fplot(@(x) self.previousPar(1) + x * self.previousPar(2), 'Color', 'k', 'LineStyle', self.modelLineStyle);
                 end             
             else
-                fplot(@(x) self.model(self.par, x), 'Color', self.modelColor, 'LineStyle', self.modelLineStyle)
+                if self.showModel
+                    fplot(@(x) self.model(self.par, x), 'Color', self.modelColor, 'LineStyle', self.modelLineStyle);
+                end
                 if self.showInitialParModel
                     hold on;
-                    fplot(@(x) self.model(self.previousPar, x), 'Color', 'k', 'LineStyle', self.modelLineStyle)
+                    fplot(@(x) self.model(self.previousPar, x), 'Color', 'k', 'LineStyle', self.modelLineStyle);
                 end
             end
 
@@ -394,17 +434,13 @@ classdef functionFit < handle
             else
                 ylim([self.ylim(1) self.ylim(2)]);
             end
-
-            if self.showGrid
-                grid minor;
-            end
-
-            hold on;
-            % Plotta in punti
-            scatter(self.datax, self.datay, "MarkerEdgeColor", self.dataColor);
-
+            
             title(self.name);
             ylabel(self.labely);
+            
+            if self.showGrid
+                grid minor;
+            end 
 
             if self.logX
                 set(ax(1), 'XScale', 'log')
@@ -419,51 +455,66 @@ classdef functionFit < handle
             else
                 set(gca, 'XTickLabel', []);
             end
-
+                        
             if self.showBox
+                
+                
                 % Aggiusta array unità di misura. Se non impostate le unità di misura
                 % sono inizializzate a un vettore delle dimensioni di par
                 % formato da numeri crescenti da 1
-                if (isempty(self.units))
-                    tmp_units = blanks(length(self.par));
+                if (isempty(self.units))       
+                    for ii = 1:length(self.par)
+                        self.units(ii) = "";
+                    end
+                    
                 else
-                    tmp_units = self.units;
+                    if any(size(self.units) ~= size(self.par))
+                        for ii = 1:length(self.par)
+                            self.units(ii) = "";
+                        end
+                        warning("Dimensione di par diversa da units. Parametro inizializzato in automatico.")
+                    end
                 end
+                
 
                 % Aggiusta array nome parametri. Se non impostato viene inizializzato a un vettore delle
                 % dimensioni di par formato da caratteri crescenti in ordine
                 % alfabetico
                 if (isempty(self.parnames))
-                    tmp_parnames = char('a' + (1:length(self.par)) - 1);
+                    for ii = 1:length(self.par)
+                        self.parnames(ii) = 'a' + ii - 1;
+                    end                
                 else
-                    tmp_parnames = self.parnames;
+                    if any(size(self.parnames) ~= size(self.par))
+                        for ii = 1:length(self.par)
+                            self.parnames(ii) = 'a' + ii - 1;
+                        end
+                        warning("Dimensione di par diversa da parnames. Parametro inizializzato in automatico.")
+                    end
                 end
+                
 
-                if isempty(self.toShowPar)
-                    self.toShowPar = ones(size(self.par));
+                if isempty(self.showParArray)
+                    self.showParArray = ones(size(self.par));
                 else
-                    if any(size(self.toShowPar) ~= size(self.par))
-                        self.toShowPar = ones(size(self.par));
-                        warning("Dimensione di par diversa da toShowPar.")
+                    if any(size(self.showParArray) ~= size(self.par))
+                        self.showParArray = ones(size(self.par));
+                        warning("Dimensione di par diversa da showParArray. Parametro inizializzato in automatico.")
                     end
                 end
 
                 % Costruisci dinamicamente la legenda con n parametri.
-                txt = "";
-
+                txt = "";            
                 for ii = 1:length(self.par)
-
-                    if self.toShowPar(ii)
+                    if self.showParArray(ii)
                         t = numberToText(self.par(ii), self.errpar(ii));
-
+                        
                         if (self.pedice ~= ' ')
-                            txt(length(txt) + 1) = tmp_parnames(ii) + "_{" + self.pedice + "} = " + t + " " + tmp_units(ii);
+                            txt(length(txt) + 1) = self.parnames(ii) + "_{" + self.pedice + "} = " + t + " " + self.units(ii);
                         else
-                            txt(length(txt) + 1) = tmp_parnames(ii) + " = " + t + " " + tmp_units(ii);
+                            txt(length(txt) + 1) = self.parnames(ii) + " = " + t + " " + self.units(ii);
                         end
-
                     end
-
                 end
 
                 % Se il chi2 � minore di 2 vengono tenute 2 cifre significative
@@ -509,7 +560,7 @@ classdef functionFit < handle
                     sigmaScarti = self.sigmay;
                 end
 
-                e2 = errorbar(self.datax, scarto_y, sigmaScarti);
+                e2 = errorbar(self.datax.*self.showDataArray, scarto_y.*self.showDataArray, sigmaScarti);
                 e2.LineStyle = 'none';
 
                 % Imposta dinamicamente i limiti
@@ -534,7 +585,7 @@ classdef functionFit < handle
                 end
 
                 hold on;
-                scatter(self.datax, scarto_y, "MarkerEdgeColor", self.dataColor);
+                scatter(self.datax.*self.showDataArray, scarto_y.*self.showDataArray, "MarkerEdgeColor", self.dataColor);
 
                 ylabel(self.reslabely);
                 xlabel(self.labelx);
