@@ -1,3 +1,8 @@
+%% TODO
+% Finire implementazione showDataArray
+% Individuare istruzione che apre una seconda immagine 
+% La funzione utilizza ancora il numberToText esterno
+
 classdef functionFit < handle
 
     properties
