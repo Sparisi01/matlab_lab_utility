@@ -35,8 +35,9 @@ classdef functionFit < handle
         showZoom (1, 1) logical
         showInitialParModel (1,1) logical 
         showModel (1,1) logical
+        continuosData (1,1) logical
         zoomPosition (1, 4) double {mustBeReal, mustBeFinite}
-        modelColor (1, 3) double {mustBeReal, mustBeFinite}
+        modelColor (1, 4) double {mustBeReal, mustBeFinite}
         modelLineStyle (1, 1) string
         dataColor (1, 3) double {mustBeReal, mustBeFinite}
         lineWidth (1, 1) double
@@ -65,7 +66,7 @@ classdef functionFit < handle
             self.datax = [];
             self.datay = [];
             % Se le incertezze non vengono definite vengono inizializzate a
-            % un vettore unitario, Se viene passato uno scalare la stessa
+            % 1% dei dati. Se viene passato uno scalare la stessa
             % incertezza viene applicata a ogni punto.
             self.sigmax = [];
             self.sigmay = [];
@@ -81,10 +82,10 @@ classdef functionFit < handle
             self.parnames = []; % Parameters name in legend box
             
             % Risultati fit  ----------------
-            self.yfit = [];
-            self.chi2norm = inf;
-            self.dof = 0;
-            self.pValue = 0;
+            self.yfit = []; % Y calcolati post regressione con parametri ottimizzati
+            self.chi2norm = inf; % CHi quadro normalizzato fit
+            self.dof = 0; % Gradi di libertà fit
+            self.pValue = 0; % P value fit
             self.fig = figure(); % Fig dopo aver generato figura e residui
             self.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
             
@@ -98,20 +99,21 @@ classdef functionFit < handle
             self.showScarti = 1; % Mostra o no grafico degli scarti
             self.showInitialParModel = 0; % Mostra modello con parametri iniziali su grafico
             self.showModel = 1; % Mostra modello sul grafico
-            self.modelColor = [1 0 0]; % Colore linea modello
-            self.modelLineStyle = '-';
-            %self.dataColor = [0.00 0.45 0.74]; % Colore dati
-            self.dataColor = [0.00 0.00 1.00]; % Colore dati
-            self.lineWidth = 2;
+            self.continuosData = 0; % Modalità visualizzazione continua
+            self.modelColor = [1 0 0 1]; % Colore linea modello
+            self.modelLineStyle = '-'; % Stile linea modello e retta scarti
+            %self.dataColor = [0.00 0.45 0.74]; % Colore dati bello
+            self.dataColor = [0.00 0.00 1.00]; % Colore dati blu
+            self.lineWidth = 2; % Spessore linea modello
             self.xlim = [0 0]; % Xlim, se uguali o in ordine sbagliato viene impostato in automatico
             self.ylim = [0 0]; % Ylim, se uguali o in ordine sbagliato viene impostato in automatico
             self.resylim = [0 0]; % Ylim residui, se uguali o in ordine sbagliato viene impostato in automatico
-            self.verbose = 1;
+            self.verbose = 1; % Bla Bla Bla
             self.name = "Model"; % Titolo grafico
-            self.labelx = "X Axes";
-            self.labely = "Y Axes";
-            self.reslabely = "Scarti"; % Label y scarti
-            self.logX = 0; % Asse X logaritmico (per entrambi i grafici)
+            self.labelx = "X Axes"; % Label Asse x
+            self.labely = "Y Axes"; % Label Asse y
+            self.reslabely = "Scarti"; % Label Asse y scarti
+            self.logX = 0; % Asse X logaritmico (anche per scarti garantendo allineamento)
             self.logY = 0; % Asse Y logaritmico
             self.boxPosition = [0.55, 0.55]; % [x, y] la dimensione di aggiusta in automatico
             self.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
@@ -550,9 +552,9 @@ classdef functionFit < handle
                 % Costruisci incertezza totale proiettando le incertezze su x
                 % attraverso le derivate del modello.
                 if isLinearFit
-                    sigmaScarti = sqrt(self.sigmay .^ 2 + (self.par(2) * self.sigmax) .^ 2);
+                    sigmaScarti = abs(sqrt(self.sigmay .^ 2 + (self.par(2) * self.sigmax) .^ 2));
                 else
-                    sigmaScarti = self.sigmay;
+                    sigmaScarti = abs(self.sigmay);
                 end
 
                 scarto_y = self.datay - self.yfit;
@@ -573,9 +575,24 @@ classdef functionFit < handle
                     filtered_scarto_y = scarto_y;
                     filtered_s_scarto_y = sigmaScarti;
                 end
+                
+                % Plot dati in modalitàdiscreta o continua
+                hold on;
+                
+                x = [min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x];
+                y = [0 0];
+                line(x, y, 'Color', self.modelColor, 'LineStyle', '-',"LineWidth", self.lineWidth)
+                
+                if self.continuosData
+                    plot(filtered_datax, filtered_scarto_y,"LineWidth",self.lineWidth,"Color",[self.dataColor 1]);
+                    plot(filtered_datax, filtered_scarto_y - filtered_s_scarto_y, "LineStyle","--","Color", [self.dataColor .3],"LineWidth",self.lineWidth);
+                    plot(filtered_datax, filtered_scarto_y + filtered_s_scarto_y, "LineStyle","--","Color", [self.dataColor .3],"LineWidth",self.lineWidth);
 
-                e2 = errorbar(filtered_datax, filtered_scarto_y, filtered_s_scarto_y);
-                e2.LineStyle = 'none';
+                else
+                    e2 = errorbar(filtered_datax, filtered_scarto_y, filtered_s_scarto_y);
+                    e2.LineStyle = 'none';                  
+                    scatter(self.datax.*self.showDataArray, scarto_y.*self.showDataArray, "MarkerEdgeColor", self.dataColor);
+                end
 
                 % Imposta dinamicamente i limiti --------------------------
 
@@ -590,14 +607,7 @@ classdef functionFit < handle
                 else
                     ylim([self.resylim(1) self.resylim(2)])
                 end
-
-                x = [min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x];
-                y = [0 0];
-                line(x, y, 'Color', self.modelColor, 'LineStyle', '-',"LineWidth", self.lineWidth)
-                                  
-                hold on;
-                scatter(self.datax.*self.showDataArray, scarto_y.*self.showDataArray, "MarkerEdgeColor", self.dataColor);
-
+                                                              
                 ylabel(self.reslabely);
                 xlabel(self.labelx);
 
