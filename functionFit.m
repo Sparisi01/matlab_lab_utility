@@ -2,6 +2,7 @@
 % Finire implementazione showDataArray
 % Individuare istruzione che apre una seconda immagine 
 % La funzione utilizza ancora il numberToText esterno
+% Sistemare algoritmo x
 
 classdef functionFit < handle
 
@@ -56,6 +57,7 @@ classdef functionFit < handle
         figureWidth (1, 1) double {mustBeReal, mustBeFinite}
         figureHeight (1, 1) double {mustBeReal, mustBeFinite}
         verbose (1, :) logical
+        nDifferentialSteps (1, 1) double
     end
 
     methods
@@ -123,6 +125,7 @@ classdef functionFit < handle
             self.fontSize = 14; % Dimensione font sia nelle label che nella box
             self.figureWidth = 8; % Larghezza immagine salvata in pollici
             self.figureHeight = 6; % Altezza immagine salvata in pollici
+            self.nDifferentialSteps = 1e8; % Risoluzione derivata numerica propagazione incertezze
         end
 
         % Genera immagine plot usando il modello dato
@@ -281,23 +284,31 @@ classdef functionFit < handle
             end
 
             [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, self.par, tmp_lb, tmp_ub, options, self.datax, self.datay, self.sigmay);
-                       
-            %Covariance Matrix
+            %Matrice di covariaza
             covar = inv(jacobian' * jacobian);
-            %Variance
-            
+            %Varianza
             var = diag(covar);
             sigma = sqrt(var);
             sigmaf = full(sigma);
-
+            
             % Results
             dof = (length(self.datax) - length(par));
-            chi2norm = resnorm / dof;
             
-            errpar = sigmaf * sqrt(chi2norm);
             yfit = self.model(par, self.datax);
+            % Derivata numerica del modello per propagazione incertezze
+            dx = (max(self.datax) - min(self.datax)) / self.nDifferentialSteps;
+            derivate = (self.model(par, self.datax + dx) - self.model(par, self.datax))/dx;
+            sigmaScarti = sqrt(self.sigmay .^2 + (derivate.*self.sigmax).^2); 
+            
+            % Calcolo Chi quadro
+            scarto_y = self.datay - yfit;            
+            % pesi = (scarto_y./sigmaScarti).^2;
+            chi2norm = sum((scarto_y./sigmaScarti).^2)/dof;
+            % chi2norm = resnorm / dof;
+            errpar = sigmaf * sqrt(chi2norm);           
             pValue = chi2cdf(resnorm, dof);    
-
+            
+            % Assegna variabili oggetto
             self.par = par;
             self.errpar = errpar;
             self.chi2norm = chi2norm;
@@ -552,9 +563,12 @@ classdef functionFit < handle
                 % Costruisci incertezza totale proiettando le incertezze su x
                 % attraverso le derivate del modello.
                 if isLinearFit
-                    sigmaScarti = abs(sqrt(self.sigmay .^ 2 + (self.par(2) * self.sigmax) .^ 2));
+                    sigmaScarti = sqrt(self.sigmay .^ 2 + (self.par(2) * self.sigmax) .^ 2);
                 else
-                    sigmaScarti = abs(self.sigmay);
+                    % Derivata numerica del modello per propagazione incertezze
+                    dx = (max(self.datax) - min(self.datax)) / self.nDifferentialSteps;
+                    derivate = (self.model(self.par, self.datax + dx) - self.model(self.par, self.datax))/dx;
+                    sigmaScarti = sqrt(self.sigmay .^2 + (derivate.*self.sigmax).^2);      
                 end
 
                 scarto_y = self.datay - self.yfit;
