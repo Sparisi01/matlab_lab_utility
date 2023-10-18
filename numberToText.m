@@ -1,7 +1,18 @@
+% -------------------------------------------------
+% Funzione per la conversione di (x pm sx)
+% in testo. Le cifre significative  di x vengono 
+% aggiustate in automatico basandosi sul numero di 
+% cifre di sx.
+% -------------------------------------------------
+
 function text = numberToText(x, sx)
-% x è un numero
-% sx è la sua incertezza
-% cifre è il numero di cifre significative
+    arguments
+        x (1,1) double {mustBeFinite, mustBeReal}
+        sx (1,1) double {mustBeFinite, mustBeReal}
+    end
+
+    % x è un numero
+    % sx è la sua incertezza
 
     og = floor(log10(abs(x))); % ordine di grandezza
     % mantissa_x = round(x / (10^og) * 10^cifre) / (10^cifre);

@@ -1,8 +1,17 @@
-%% TODO
+% -------------------------------------------------
+% Funzione per eseguire fit a un modello generico e
+% produrre grafici con numero di parametri variabile. 
+% ---------------------------------------------------
+% DIPENDENZE:
+% - numberToText.m
+% - exportFigure.m
+% - propagation.m
+% - lsqnonlin.m
+% ---------------------------------------------------
+
+% TODO
 % Finire implementazione showDataArray
 % Individuare istruzione che apre una seconda immagine 
-% La funzione utilizza ancora il numberToText esterno
-% Sistemare algoritmo x
 
 classdef functionFit < handle
 
@@ -63,129 +72,130 @@ classdef functionFit < handle
     methods
 
         % Valori di default per le opzioni
-        function self = functionFit()
+        function this = functionFit()
             % Dati --------------------------
-            self.datax = [];
-            self.datay = [];
+            this.datax = [];
+            this.datay = [];
             % Se le incertezze non vengono definite vengono inizializzate a
             % 1% dei dati. Se viene passato uno scalare la stessa
             % incertezza viene applicata a ogni punto.
-            self.sigmax = [];
-            self.sigmay = [];
+            this.sigmax = [];
+            this.sigmay = [];
 
             % Parametri modello -------------
-            self.model = @(par, x) par(1) + x * par(2); % Modello su cui eseguire il fit
-            self.par = []; % Valore dei parametri
-            self.previousPar = []; % Valore dei parametri
-            self.errpar = []; % Errore dei parametri
-            self.upperBounds = []; % UpperBound parametri
-            self.lowerBounds = []; % LowerBound parametri
-            self.units = []; % Units for parameters in legend box
-            self.parnames = []; % Parameters name in legend box
+            this.model = @(par, x) par(1) + x * par(2); % Modello su cui eseguire il fit
+            this.par = []; % Valore dei parametri
+            this.previousPar = []; % Valore dei parametri
+            this.errpar = []; % Errore dei parametri
+            this.upperBounds = []; % UpperBound parametri
+            this.lowerBounds = []; % LowerBound parametri
+            this.units = []; % Units for parameters in legend box
+            this.parnames = []; % Parameters name in legend box
             
             % Risultati fit  ----------------
-            self.yfit = []; % Y calcolati post regressione con parametri ottimizzati
-            self.chi2norm = inf; % CHi quadro normalizzato fit
-            self.dof = 0; % Gradi di libertà fit
-            self.pValue = 0; % P value fit
-            self.fig = figure(); % Fig dopo aver generato figura e residui
-            self.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
+            this.yfit = []; % Y calcolati post regressione con parametri ottimizzati
+            this.chi2norm = inf; % CHi quadro normalizzato fit
+            this.dof = 0; % Gradi di libertà fit
+            this.pValue = 0; % P value fit
+            this.fig = figure(); % Fig dopo aver generato figura e residui
+            this.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
             
             % Estetica ----------------------
-            self.showParArray = [1 1]; % Scegli quali parametri mostrate con un array di bool della stessa dimensione di par
-            self.showDataArray = []; % Scegli quali dati mostrate con un array di bool della stessa dimensione dei dati. I dati non mostrati in grafico contribuiscono comunque al fit
-            self.showChi = 1; % Mostra o no chi quadro in legenda
-            self.showChiNorm = 0; % Mostra chi2normalizzato
-            self.showPValue = 0; % Mostra PValue
-            self.showBox = 1; % Mostra o no box parametri
-            self.showScarti = 1; % Mostra o no grafico degli scarti
-            self.showInitialParModel = 0; % Mostra modello con parametri iniziali su grafico
-            self.showModel = 1; % Mostra modello sul grafico
-            self.continuosData = 0; % Modalità visualizzazione continua
-            self.modelColor = [1 0 0 1]; % Colore linea modello
-            self.modelLineStyle = '-'; % Stile linea modello e retta scarti
-            %self.dataColor = [0.00 0.45 0.74]; % Colore dati bello
-            self.dataColor = [0.00 0.00 1.00]; % Colore dati blu
-            self.lineWidth = 2; % Spessore linea modello
-            self.xlim = [0 0]; % Xlim, se uguali o in ordine sbagliato viene impostato in automatico
-            self.ylim = [0 0]; % Ylim, se uguali o in ordine sbagliato viene impostato in automatico
-            self.resylim = [0 0]; % Ylim residui, se uguali o in ordine sbagliato viene impostato in automatico
-            self.verbose = 1; % Bla Bla Bla
-            self.name = "Model"; % Titolo grafico
-            self.labelx = "X Axes"; % Label Asse x
-            self.labely = "Y Axes"; % Label Asse y
-            self.reslabely = "Scarti"; % Label Asse y scarti
-            self.logX = 0; % Asse X logaritmico (anche per scarti garantendo allineamento)
-            self.logY = 0; % Asse Y logaritmico
-            self.boxPosition = [0.55, 0.55]; % [x, y] la dimensione di aggiusta in automatico
-            self.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
-            self.showZoom = false; % Mostra grafico con zoom su un punto e barre incertezza
-            self.zoomPosition = [0.21, 0.75, 0.15, 0.15]; % [x, y, w, h]
-            self.showGrid = 1; % Mostra griglia minor sui grafici
-            self.fontSize = 14; % Dimensione font sia nelle label che nella box
-            self.figureWidth = 8; % Larghezza immagine salvata in pollici
-            self.figureHeight = 6; % Altezza immagine salvata in pollici
-            self.nDifferentialSteps = 1e8; % Risoluzione derivata numerica propagazione incertezze
+            this.showParArray = [1 1]; % Scegli quali parametri mostrate con un array di bool della stessa dimensione di par
+            this.showDataArray = []; % Scegli quali dati mostrate con un array di bool della stessa dimensione dei dati. I dati non mostrati in grafico contribuiscono comunque al fit
+            this.showChi = 1; % Mostra o no chi quadro in legenda
+            this.showChiNorm = 0; % Mostra chi2normalizzato
+            this.showPValue = 0; % Mostra PValue
+            this.showBox = 1; % Mostra o no box parametri
+            this.showScarti = 1; % Mostra o no grafico degli scarti
+            this.showInitialParModel = 0; % Mostra modello con parametri iniziali su grafico
+            this.showModel = 1; % Mostra modello sul grafico
+            this.continuosData = 0; % Modalità visualizzazione continua
+            this.modelColor = [1 0 0 1]; % Colore linea modello
+            this.modelLineStyle = '-'; % Stile linea modello e retta scarti
+            %this.dataColor = [0.00 0.45 0.74]; % Colore dati bello
+            this.dataColor = [0.00 0.00 1.00]; % Colore dati blu
+            this.lineWidth = 2; % Spessore linea modello
+            this.xlim = [0 0]; % Xlim, se uguali o in ordine sbagliato viene impostato in automatico
+            this.ylim = [0 0]; % Ylim, se uguali o in ordine sbagliato viene impostato in automatico
+            this.resylim = [0 0]; % Ylim residui, se uguali o in ordine sbagliato viene impostato in automatico
+            this.verbose = 1; % Bla Bla Bla
+            this.name = "Model"; % Titolo grafico
+            this.labelx = "X Axes"; % Label Asse x
+            this.labely = "Y Axes"; % Label Asse y
+            this.reslabely = "Scarti"; % Label Asse y scarti
+            this.logX = 0; % Asse X logaritmico (anche per scarti garantendo allineamento)
+            this.logY = 0; % Asse Y logaritmico
+            this.boxPosition = [0.55, 0.55]; % [x, y] la dimensione di aggiusta in automatico
+            this.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
+            this.showZoom = false; % Mostra grafico con zoom su un punto e barre incertezza
+            this.zoomPosition = [0.21, 0.75, 0.15, 0.15]; % [x, y, w, h]
+            this.showGrid = 1; % Mostra griglia minor sui grafici
+            this.fontSize = 14; % Dimensione font sia nelle label che nella box
+            this.figureWidth = 8; % Larghezza immagine salvata in pollici
+            this.figureHeight = 6; % Altezza immagine salvata in pollici            
         end
 
         % Genera immagine plot usando il modello dato
-        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotModelFit(self, file_name)
-
+        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotModelFit(this, file_name)
             arguments
-                self
+                this
                 file_name (1, 1) string = ""
             end
             
-            self.previousPar = self.par;
+            % Salva parametri precedenti al fit
+            this.previousPar = this.par;
+
             % Esegui fit lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
-            [par, errpar, yfit, chi2norm, dof, pValue] = modelFit(self);
+            [par, errpar, yfit, chi2norm, dof, pValue] = modelFit(this);
                        
             % Genera Figura
-            [fig, ax] = generatePlotFig(self, false);
-            self.fig = fig;
-            self.axes = ax;
+            [fig, ax] = generatePlotFig(this, false);
+            this.fig = fig;
+            this.axes = ax;
 
             % Esporta figura in formato png
             if (strlength(file_name) > 0)
-                exportFigure(fig, ax, file_name);
+                exportFigure(fig, ax, file_name, this.fontSize, this.figureWidth, this.figureHeight);
             end
 
         end
 
         % Genera immagine plot usando il modello lineare
-        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotLinearFit(self, file_name)
-
+        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotLinearFit(this, file_name)
             arguments
-                self
+                this
                 file_name (1, 1) string = ""
             end
             
-            self.previousPar = self.par;
+            % Salva parametri precedenti al fit
+            this.previousPar = this.par;
+
             % Esegui fit non lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
-            [par, errpar, yfit, chi2norm, dof, pValue] = linearFit(self);
+            [par, errpar, yfit, chi2norm, dof, pValue] = linearFit(this);
                                    
             % Genera Figura
-            [fig, ax] = generatePlotFig(self, true);
-            self.fig = fig;
-            self.axes = ax;
+            [fig, ax] = generatePlotFig(this, true);
+            this.fig = fig;
+            this.axes = ax;
 
             % Esporta figura in formato png
             if (strlength(file_name) > 0)
-                exportFigure(fig, ax, file_name);
+                exportFigure(fig, ax, file_name, this.fontSize, this.figureWidth, this.figureHeight);
             end
 
         end
 
         % Funzione per fit lineare
-        function [par, errpar, yfit, chi2norm, dof, pValue] = linearFit(self)
+        function [par, errpar, yfit, chi2norm, dof, pValue] = linearFit(this)
 
             % Contolla validità parametri
-            safetyCheck(self)
+            safetyCheck(this)
 
-            data_x = self.datax;
-            data_y = self.datay;
-            sigma_x = self.sigmax;
-            sigma_y = self.sigmay;
+            data_x = this.datax;
+            data_y = this.datay;
+            sigma_x = this.sigmax;
+            sigma_y = this.sigmay;
             
             dataN = length(data_x);
             old_b = 9999999;
@@ -244,342 +254,336 @@ classdef functionFit < handle
             dof = dataN - 2;
             pValue = chi2cdf(chi2, dof);
             
-            self.par = par;
-            self.errpar = errpar;
-            self.chi2norm = chi2norm;
-            self.yfit = yfit;
-            self.dof = dof;
-            self.pValue = pValue;
+            this.par = par;
+            this.errpar = errpar;
+            this.chi2norm = chi2norm;
+            this.yfit = yfit;
+            this.dof = dof;
+            this.pValue = pValue;
 
         end
 
         % Funzione per fit non lineare
-        function [par, errpar, yfit, chi2norm, dof, pValue, flag] = modelFit(self)
+        function [par, errpar, yfit, chi2norm, dof, pValue, flag] = modelFit(this)
 
             % Contolla validità parametri
-            safetyCheck(self)
+            safetyCheck(this)
 
             % Definizione funzione scarti a partire dal modello
-            scarti = @(par, xd, yd, ed) (self.model(par, xd) - yd) ./ ed;
+            scarti = @(par, xd, yd, ed) (this.model(par, xd) - yd) ./ ed;
 
             % Aggiusta dimensioni upper e lower bound. Se non impostate
             % vengono inizializzati a due vettori delle dimensione di par a
             % valori + e - inf
-            if (isempty(self.upperBounds))
-                tmp_ub = ones(size(self.par)) * inf;
+            if (isempty(this.upperBounds))
+                tmp_ub = ones(size(this.par)) * inf;
             else
-                tmp_ub = self.upperBounds;
+                tmp_ub = this.upperBounds;
             end
 
-            if (isempty(self.lowerBounds))
-                tmp_lb = ones(size(self.par)) * -inf;
+            if (isempty(this.lowerBounds))
+                tmp_lb = ones(size(this.par)) * -inf;
             else
-                tmp_lb = self.lowerBounds;
+                tmp_lb = this.lowerBounds;
             end
            
-            if self.verbose
+            if this.verbose
                 options = optimoptions('lsqnonlin');
             else
                  options = optimoptions('lsqnonlin', 'Display', 'none');
             end
+            
+            % Fit non lineare Libreria Matlab
+            [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, this.par, tmp_lb, tmp_ub, options, this.datax, this.datay, this.sigmay);
+                                 
+            % Gradi di liberta
+            dof = (length(this.datax) - length(par));
+            
+            % Yfit ottimizzati
+            yfit = this.model(par, this.datax);
+            
+            % Propaga incertezze x lungo y
+            sigma_propagata = propagation(@(x) this.model(par, x), this.datax, this.sigmax);
+            sigmaScarti = sqrt(this.sigmay .^2 + (sigma_propagata).^2); 
+            
+            % Calcolo Chi quadro e pValue
+            scarto_y = this.datay - yfit;            
+            chi2norm = sum((scarto_y./sigmaScarti).^2)/dof;                      
+            pValue = 1 - chi2cdf(resnorm, dof);    
 
-            [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, self.par, tmp_lb, tmp_ub, options, self.datax, self.datay, self.sigmay);
-            %Matrice di covariaza
+            % Matrice di covariaza
             covar = inv(jacobian' * jacobian);
-            %Varianza
+
+            % Calcolo errori parametri
             var = diag(covar);
             sigma = sqrt(var);
             sigmaf = full(sigma);
-            
-            % Results
-            dof = (length(self.datax) - length(par));
-            
-            yfit = self.model(par, self.datax);
-            % Derivata numerica del modello per propagazione incertezze
-            dx = (max(self.datax) - min(self.datax)) / self.nDifferentialSteps;
-            derivate = (self.model(par, self.datax + dx) - self.model(par, self.datax))/dx;
-            sigmaScarti = sqrt(self.sigmay .^2 + (derivate.*self.sigmax).^2); 
-            
-            % Calcolo Chi quadro
-            scarto_y = self.datay - yfit;            
-            % pesi = (scarto_y./sigmaScarti).^2;
-            chi2norm = sum((scarto_y./sigmaScarti).^2)/dof;
-            % chi2norm = resnorm / dof;
             errpar = sigmaf * sqrt(chi2norm);           
-            pValue = chi2cdf(resnorm, dof);    
-            
+                        
             % Assegna variabili oggetto
-            self.par = par;
-            self.errpar = errpar;
-            self.chi2norm = chi2norm;
-            self.yfit = yfit;
-            self.dof = dof;
-            self.pValue = pValue;            
+            this.par = par;
+            this.errpar = errpar;
+            this.chi2norm = chi2norm;
+            this.yfit = yfit;
+            this.dof = dof;
+            this.pValue = pValue;            
         end
     end
 
     methods (Hidden)
 
         % Fa tante cose belle
-        function safetyCheck(self)
+        function safetyCheck(this)
             
             % Controlla dimensione dati -----------------------------------
-            if any(size(self.datay) ~= size(self.datax))                   
+            if any(size(this.datay) ~= size(this.datax))                   
                 error('u:stuffed:it', 'datax, datay devono essere della stesa dimensione');
             end
 
             % Controlla dimensione bound ----------------------------------
-            if ~(isempty(self.upperBounds) || isempty(self.lowerBounds)) && ...
-                    any(size(self.upperBounds) ~= size(self.lowerBounds))
+            if ~(isempty(this.upperBounds) || isempty(this.lowerBounds)) && ...
+                    any(size(this.upperBounds) ~= size(this.lowerBounds))
 
                 error('u:stuffed:it', "ub e lb devono essere della stesa dimensione");
             end
             
             % Controlla dimensione incertezze -----------------------------
-            if (isempty(self.sigmax))
-                self.sigmax = max([0.01*max(self.datax)*ones(size(self.datax)), 0.01*self.datax],[],2);
+            if (isempty(this.sigmax))
+                this.sigmax = max([0.01*max(this.datax)*ones(size(this.datax)), 0.01*this.datax],[],2);
                 warning("Incertezze su datax non assegnate. Inizializzate all'1%")           
             else
-                if size(self.sigmax) == [1,1]
-                    self.sigmax = ones(size(self.datax)) * self.sigmax;
+                if size(this.sigmax) == [1,1]
+                    this.sigmax = ones(size(this.datax)) * this.sigmax;
                 end                
             end
             
             % Controlla dimensioni sigma e inizializza ---------------------
-            if (isempty(self.sigmay))
-                self.sigmay = max([0.01*max(self.datay)*ones(size(self.datay)), 0.01*self.datay],[],2);
+            if (isempty(this.sigmay))
+                this.sigmay = max([0.01*max(this.datay)*ones(size(this.datay)), 0.01*this.datay],[],2);
                 warning("Incertezze su datay non assegnate. Inizializzate all'1%")        
             else
-                if size(self.sigmay) == [1,1]
-                    self.sigmay = ones(size(self.datay)) * self.sigmay;
+                if size(this.sigmay) == [1,1]
+                    this.sigmay = ones(size(this.datay)) * this.sigmay;
                 end 
             end
         end
 
-        function [fig, ax] = generatePlotFig(self, isLinearFit)
+        function [fig, ax] = generatePlotFig(this, isLinearFit)
 
             fig = figure();
             
-            % ----------------------------------------------------
-
-            if self.showScarti
+            % Costrusci tiled layout
+            if this.showScarti
                 h = 3;
-                tiledlayout(h, 1);
-
-                % Costruzione grafico principale
+                tiledlayout(h, 1);               
                 ax(1) = nexttile(1, [h - 1, 1]);
             else
                 ax(1) = axes();
             end
-
-            % ----------------------------------------------------
-
+            
+            % Determina se i dati vanno filtrati
             toFilter = 1;
-            if (isempty(self.showDataArray))
-                self.showDataArray = ones(size(self.datax));
+            if (isempty(this.showDataArray))
+                this.showDataArray = ones(size(this.datax));
                 toFilter = 0;
             else
-                if size(self.showDataArray) ~= size(self.datax)
+                if size(this.showDataArray) ~= size(this.datax)
                     error('u:stuffed:it', "showDataArray e datax, datay devono essere della stessa dimensione.");
                 end
             end
-                                   
+                    
+            % Filtra dati in base a showDataArray
             if toFilter
                 jj = 1;
-                filtered_datax = ones(sum(self.showDataArray),1);
-                filtered_datay = ones(sum(self.showDataArray),1);
+                filtered_datax = ones(sum(this.showDataArray),1);
+                filtered_datay = ones(sum(this.showDataArray),1);
 
-                for ii = 1:length(self.showDataArray)
-                    if self.showDataArray(ii) == 1                        
-                        filtered_datax(jj) = self.datax(jj);
-                        filtered_datay(jj) = self.datay(jj);
+                for ii = 1:length(this.showDataArray)
+                    if this.showDataArray(ii) == 1                        
+                        filtered_datax(jj) = this.datax(jj);
+                        filtered_datay(jj) = this.datay(jj);
                         jj = jj + 1;
                     end
                 end
             else
-                filtered_datax = self.datax;
-                filtered_datay = self.datay;          
-            end
-
-            % ----------------------------------------------------
-            
-            
+                filtered_datax = this.datax;
+                filtered_datay = this.datay;          
+            end            
+                        
             hold on
             box on
 
-            scatter(filtered_datax, filtered_datay, "MarkerEdgeColor", self.dataColor);
+            % Plot dei dati
+            scatter(filtered_datax, filtered_datay, "MarkerEdgeColor", this.dataColor);
                         
             % Disegna la funzione con parametri ottimizzati e parametri iniziali     
             if isLinearFit
-                if self.showModel
-                    fplot(@(x) self.par(1) + x * self.par(2), 'Color', self.modelColor, 'LineStyle', self.modelLineStyle, "LineWidth",self.lineWidth);
+                if this.showModel
+                    fplot(@(x) this.par(1) + x * this.par(2), 'Color', this.modelColor, 'LineStyle', this.modelLineStyle, "LineWidth",this.lineWidth);
                 end
-                if self.showInitialParModel
+                if this.showInitialParModel
                     hold on;
-                    fplot(@(x) self.previousPar(1) + x * self.previousPar(2), 'Color', 'k', 'LineStyle', self.modelLineStyle,"LineWidth",self.lineWidth);
+                    fplot(@(x) this.previousPar(1) + x * this.previousPar(2), 'Color', 'k', 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
                 end             
             else
-                if self.showModel
-                    fplot(@(x) self.model(self.par, x), 'Color', self.modelColor, 'LineStyle', self.modelLineStyle,"LineWidth",self.lineWidth);
+                if this.showModel
+                    fplot(@(x) this.model(this.par, x), 'Color', this.modelColor, 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
                 end
-                if self.showInitialParModel
+                if this.showInitialParModel
                     hold on;
-                    fplot(@(x) self.model(self.previousPar, x), 'Color', 'k', 'LineStyle', self.modelLineStyle,"LineWidth",self.lineWidth);
+                    fplot(@(x) this.model(this.previousPar, x), 'Color', 'k', 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
                 end
             end
 
             % Imposta dinamicamente i limiti ------------------------------
 
-            delta_x = abs(max(self.datax) - min(self.datax));
-
-            if self.xlim(1) >= self.xlim(2)
-                xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
+            delta_x = abs(max(this.datax) - min(this.datax));
+            
+            if this.xlim(1) >= this.xlim(2)
+                xlim([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]);
             else
-                xlim([self.xlim(1) self.xlim(2)]);
+                xlim([this.xlim(1) this.xlim(2)]);
             end
 
-            if self.ylim(1) >= self.ylim(2)
-                ylim([min(self.datay) - 0.1 * abs(min(self.datay)) max(self.datay) + 0.1 *abs(max(self.datay))]);
+            if this.ylim(1) >= this.ylim(2)
+                ylim([min(this.datay) - 0.1 * abs(min(this.datay)) max(this.datay) + 0.1 *abs(max(this.datay))]);
             else
-                ylim([self.ylim(1) self.ylim(2)]);
+                ylim([this.ylim(1) this.ylim(2)]);
             end
             
             % Estetica assi -----------------------------------------------
 
-            title(self.name);
-            ylabel(self.labely);
+            title(this.name);
+            ylabel(this.labely);
             
-            if self.showGrid
+            if this.showGrid
                 grid minor;
             end 
 
-            if self.logX
+            if this.logX
                 set(ax(1), 'XScale', 'log')
             end
 
-            if self.logY
+            if this.logY
                 set(ax(1), 'YScale', 'log')
             end
 
-            if ~self.showScarti
-                xlabel(self.labelx);
+            if ~this.showScarti
+                xlabel(this.labelx);
             else
                 set(gca, 'XTickLabel', []);
             end
             
+            % Box parametri -----------------------------------------------
             
-            if self.showBox
-                
-                
-                % Aggiusta array unitÃ  di misura. Se non impostate le unitÃ  di misura
-                % sono inizializzate a un vettore delle dimensioni di par
-                % formato da numeri crescenti da 1
-                if (isempty(self.units))       
-                    for ii = 1:length(self.par)
-                        self.units(ii) = "";
-                    end
-                    
+            if this.showBox
+                              
+                % Aggiusta array unita di misura.
+                if (isempty(this.units))       
+                    for ii = 1:length(this.par)
+                        this.units(ii) = "";
+                    end                  
                 else
-                    if any(size(self.units) ~= size(self.par))
-                        for ii = 1:length(self.par)
-                            self.units(ii) = "";
+                    if any(size(this.units) ~= size(this.par))
+                        for ii = 1:length(this.par)
+                            this.units(ii) = "";
                         end
                         warning("Dimensione di par diversa da units. Parametro inizializzato in automatico.")
                     end
                 end
                 
-
                 % Aggiusta array nome parametri. Se non impostato viene inizializzato a un vettore delle
                 % dimensioni di par formato da caratteri crescenti in ordine
                 % alfabetico
-                if (isempty(self.parnames))
-                    for ii = 1:length(self.par)
-                        self.parnames(ii) = 'a' + ii - 1;
+                if (isempty(this.parnames))
+                    for ii = 1:length(this.par)
+                        this.parnames(ii) = 'a' + ii - 1;
                     end                
                 else
-                    if any(size(self.parnames) ~= size(self.par))
-                        for ii = 1:length(self.par)
-                            self.parnames(ii) = 'a' + ii - 1;
+                    if any(size(this.parnames) ~= size(this.par))
+                        for ii = 1:length(this.par)
+                            this.parnames(ii) = 'a' + ii - 1;
                         end
                         warning("Dimensione di par diversa da parnames. Parametro inizializzato in automatico.")
                     end
                 end              
-
-                if isempty(self.showParArray)
-                    self.showParArray = ones(size(self.par));
+                
+                if isempty(this.showParArray)
+                    this.showParArray = ones(size(this.par));
                 else
-                    if any(size(self.showParArray) ~= size(self.par))
-                        self.showParArray = ones(size(self.par));
+                    if any(size(this.showParArray) ~= size(this.par))
+                        this.showParArray = ones(size(this.par));
                         warning("Dimensione di par diversa da showParArray. Parametro inizializzato in automatico.")
                     end
                 end
 
                 % Costruisci dinamicamente la legenda con n parametri.
                 txt = "";            
-                for ii = 1:length(self.par)
-                    if self.showParArray(ii)
-                        t = numberToText(self.par(ii), self.errpar(ii));                                            
-                        if (self.pedice ~= ' ')
-                            txt(length(txt) + 1) = self.parnames(ii) + "_{" + self.pedice + "} = " + t + " " + self.units(ii);
+                for ii = 1:length(this.par)
+                    if this.showParArray(ii)
+                        t = numberToText(this.par(ii), this.errpar(ii));                                            
+                        if (this.pedice ~= ' ')
+                            txt(length(txt) + 1) = this.parnames(ii) + "_{" + this.pedice + "} = " + t + " " + this.units(ii);
                         else
-                            txt(length(txt) + 1) = self.parnames(ii) + " = " + t + " " + self.units(ii);
+                            txt(length(txt) + 1) = this.parnames(ii) + " = " + t + " " + this.units(ii);
                         end
                     end
                 end
 
                 % Se il chi2 è minore di 2 vengono tenute 2 cifre significative
                 % sennò si arrotonda all'intero.
-                if self.chi2norm * self.dof > 2
+                if this.chi2norm * this.dof > 2
                     nRound = 0;
                 else
                     nRound = 2;
                 end
 
-                if self.showChi
-                    txt(length(txt) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm * self.dof, nRound) + "/" + self.dof;
+                if this.showChi
+                    txt(length(txt) + 1) = "\chi^2_{" + this.pedice + "} = " + round(this.chi2norm * this.dof, nRound) + "/" + this.dof;
                 end
 
-                if self.showChiNorm
-                    txt(length(txt) + 1) = "\chi^2_{" + self.pedice + "} = " + round(self.chi2norm, 2);
+                if this.showChiNorm
+                    txt(length(txt) + 1) = "\chi^2_{" + this.pedice + "} = " + round(this.chi2norm, 2);
                 end
 
-                if self.showPValue
-                    txt(length(txt) + 1) = "pValue_{" + self.pedice + "} = " + round(self.pValue, 2);
+                if this.showPValue
+                    txt(length(txt) + 1) = "pValue_{" + this.pedice + "} = " + round(this.pValue, 2);
                 end
 
-                % Dinamic position
-                annotation("textbox", [self.boxPosition 0 0], ...
+                % Posizione box
+                annotation("textbox", [this.boxPosition 0 0], ...
                     "BackgroundColor", [1, 1, 1], ...
-                    "fontSize", self.fontSize, ...
+                    "fontSize", this.fontSize, ...
                     "String", txt(2:end), ...
                     'FitBoxToText', 'on' ...
                 );
             end
 
-            if self.showScarti
-                % Costruzione grafico degli scarti
+
+            % Grafico scarti  ---------------------------------------------
+
+            if this.showScarti                
                 ax(2) = nexttile([1 1]);
                 
-                % Costruisci incertezza totale proiettando le incertezze su x
-                % attraverso le derivate del modello.
+                % Propagazione incertezze sugli scarti
                 if isLinearFit
-                    sigmaScarti = sqrt(self.sigmay .^ 2 + (self.par(2) * self.sigmax) .^ 2);
+                    sigmaScarti = sqrt(this.sigmay .^ 2 + (this.par(2) * this.sigmax) .^ 2);
                 else
-                    % Derivata numerica del modello per propagazione incertezze
-                    dx = (max(self.datax) - min(self.datax)) / self.nDifferentialSteps;
-                    derivate = (self.model(self.par, self.datax + dx) - self.model(self.par, self.datax))/dx;
-                    sigmaScarti = sqrt(self.sigmay .^2 + (derivate.*self.sigmax).^2);      
+                    % Derivata numerica del modello per propagazione incertezze                   
+                    sigma_propagata = propagation(@(x) this.model(self.par, x), this.datax, this.sigmax);
+                    sigmaScarti = sqrt(this.sigmay .^2 + (sigma_propagata).^2);    
                 end
+                
+                % Vettore scarti
+                scarto_y = this.datay - this.yfit;
 
-                scarto_y = self.datay - self.yfit;
-
-                % Filtra dati in base a showDataArray                           
+                % Filtra scarti in base a showDataArray                           
                 if toFilter
                     jj = 1;
-                    filtered_scarto_y = ones(sum(self.showDataArray),1);
-                    filtered_s_scarto_y = ones(sum(self.showDataArray),1);
-                    for ii = 1:length(self.showDataArray)
-                        if self.showDataArray(ii) == 1
+                    filtered_scarto_y = ones(sum(this.showDataArray),1);
+                    filtered_s_scarto_y = ones(sum(this.showDataArray),1);
+                    for ii = 1:length(this.showDataArray)
+                        if this.showDataArray(ii) == 1
                             filtered_scarto_y(jj) = scarto_y(jj);
                             filtered_s_scarto_y(jj) = sigmaScarti(jj);
                             jj = jj + 1;
@@ -589,127 +593,69 @@ classdef functionFit < handle
                     filtered_scarto_y = scarto_y;
                     filtered_s_scarto_y = sigmaScarti;
                 end
-                
-                % Plot dati in modalitàdiscreta o continua
+                                
                 hold on;
                 
-                x = [min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x];
+                % Linea orizzontale lungo y=0 negli scarti
+                x = [min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x];
                 y = [0 0];
-                line(x, y, 'Color', self.modelColor, 'LineStyle', '-',"LineWidth", self.lineWidth)
+                line(x, y, 'Color', this.modelColor, 'LineStyle', '-',"LineWidth", this.lineWidth)
                 
-                if self.continuosData
-                    plot(filtered_datax, filtered_scarto_y,"LineWidth",self.lineWidth,"Color",[self.dataColor 1]);
-                    plot(filtered_datax, filtered_scarto_y - filtered_s_scarto_y, "LineStyle","--","Color", [self.dataColor .3],"LineWidth",self.lineWidth);
-                    plot(filtered_datax, filtered_scarto_y + filtered_s_scarto_y, "LineStyle","--","Color", [self.dataColor .3],"LineWidth",self.lineWidth);
-
+                % Plot degli scarti
+                if this.continuosData
+                    plot(filtered_datax, filtered_scarto_y,"LineWidth",this.lineWidth,"Color",[this.dataColor 1]);
+                    plot(filtered_datax, filtered_scarto_y - filtered_s_scarto_y, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
+                    plot(filtered_datax, filtered_scarto_y + filtered_s_scarto_y, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
                 else
                     e2 = errorbar(filtered_datax, filtered_scarto_y, filtered_s_scarto_y);
                     e2.LineStyle = 'none';                  
-                    scatter(self.datax.*self.showDataArray, scarto_y.*self.showDataArray, "MarkerEdgeColor", self.dataColor);
+                    scatter(this.datax.*this.showDataArray, scarto_y.*this.showDataArray, "MarkerEdgeColor", this.dataColor);
                 end
-
-                % Imposta dinamicamente i limiti --------------------------
-
-                if self.xlim(1) >= self.xlim(2)
-                    xlim([min(self.datax) - 0.1 * delta_x max(self.datax) + 0.1 * delta_x]);
+               
+                % Limiti asse X scarti
+                if this.xlim(1) >= this.xlim(2)
+                    xlim([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]);
                 else
-                    xlim([self.xlim(1) self.xlim(2)]);
+                    xlim([this.xlim(1) this.xlim(2)]);
                 end
-
-                if self.resylim(1) >= self.resylim(2)
+                
+                % Limiti asse Y scarti
+                if this.resylim(1) >= this.resylim(2)
                     ylim([-max(scarto_y .* 2) - max(sigmaScarti) max(scarto_y .* 2) + max(sigmaScarti)]);
                 else
-                    ylim([self.resylim(1) self.resylim(2)])
+                    ylim([this.resylim(1) this.resylim(2)])
                 end
-                                                              
-                ylabel(self.reslabely);
-                xlabel(self.labelx);
-
-                if self.logX
+                
+                % Label Scarti
+                ylabel(this.reslabely);
+                xlabel(this.labelx);
+                
+                % Asse x scarti
+                if this.logX
                     set(ax(2), 'XScale', 'log')
                 end
 
-                if self.showGrid
+                if this.showGrid
                     grid minor;
                 end
 
             end
 
-            % Costruisci grafico zoom errori su un punto
-            % Sono mostrati sia gli errori su x che y
-            if (self.showZoom)
-                hold on;
-                id = round(length(self.datax) / 2);
-                x = self.datax(id);
-                y = self.datay(id);
-                ax(length(ax)+1) = axes("Position", self.zoomPosition);
-                errorbar(x, y, -self.sigmay(id), self.sigmay(id), -self.sigmax(id), self.sigmax(id), 'o');
-                xlim(ax(length(ax)), [(x - self.sigmax(id) * 1.5) (x + self.sigmax(id) * 1.5)]);
-                ylim(ax(length(ax)), [(y - self.sigmay(id) * 1.5) (y + self.sigmay(id) * 1.5)]);
+            % Grafico errore zoom  ----------------------------------------
 
-                if self.showGrid
+            if (this.showZoom)
+                hold on;
+                id = round(length(this.datax) / 2);
+                x = this.datax(id);
+                y = this.datay(id);
+                ax(length(ax)+1) = axes("Position", this.zoomPosition);
+                errorbar(x, y, -this.sigmay(id), this.sigmay(id), -this.sigmax(id), this.sigmax(id), 'o');
+                xlim(ax(length(ax)), [(x - this.sigmax(id) * 1.5) (x + this.sigmax(id) * 1.5)]);
+                ylim(ax(length(ax)), [(y - this.sigmay(id) * 1.5) (y + this.sigmay(id) * 1.5)]);
+                if this.showGrid
                     grid on;
                 end
-
-            end
-
-            % Imposta dimensione font per ogni asse.
-            % Richiesto perchè il tiled layout lavora con due assi
-            % differenti
-            for a = 1:length(ax)
-                set(ax(a), "fontSize", self.fontSize);
-            end
-
-        end
-
-        % Funzione export figura in formato png
-        function exportFigure(self, image_figure, image_axes, image_name)
-
-            % Imposta dimensione font per ogni asse
-            for a = image_axes
-                set(a, "fontSize", self.fontSize);
-            end
-
-            set(image_figure, 'PaperUnits', 'inches');
-            set(image_figure, 'PaperSize', [self.figureWidth self.figureHight]);
-
-            set(image_figure, 'InvertHardcopy', 'on');
-            set(image_figure, 'PaperUnits', 'inches');
-            set(image_figure, 'PaperPosition', [0, 0, self.figureWidth, self.figureHight]);
-
-            % Salva file come PNG
-            print(image_name, '-dpng', '-r300');
-
-        end
-
-        % Number to text
-        function text = numberToText(x, sx)
-            arguments
-                x double
-                sx double
-            end
-            % x Ã¨ un numero
-            % sx Ã¨ la sua incertezza
-            % cifre Ã¨ il numero di cifre significative
-            
-            og = floor(log10(abs(x))); % ordine di grandezza
-            % mantissa_x = round(x / (10^og) * 10^cifre) / (10^cifre);
-
-            ogs = floor(log10(abs(sx)));
-            sx = round(sx / (10 ^ ogs)) * (10 ^ ogs);
-            cifre = strlength(string(sx / (10 ^ og))) - 2;
-
-            mantissa_x = sprintf("%0." + cifre + "f", x / (10 ^ og));
-            mantissa_sx = sx / (10 ^ og) + "";
-
-            if og == 0
-                text = "(" + mantissa_x + " \pm " + mantissa_sx + ")";
-            else
-                text = "(" + mantissa_x + " \pm " + mantissa_sx + ")\times{}10^{" + og + "}";
-            end
-
-        end
-
+            end            
+        end        
     end
-
 end

@@ -1,18 +1,22 @@
-function exportFigure(image_figure, image_axes, image_name)
-% image_figure = gcf
-% image_axes = gca
-% image_name = "percorso/nome_del_file"
-%
-% Esporta un'immagine di proporzione 4:3 con la dimensione del font di 14
-%
-% E' preferibile non esporre i parametri per le dimensioni in modo
-% da fissare uno stile omogeneo tra i grafici.
+% -------------------------------------------------
+% Funzione per l'export automatico di una figura
+% in formato png. 
+% -------------------------------------------------
+
+function exportFigure(image_figure, image_axes, image_name, fontSize, image_width, image_height)
+    arguments
+        image_figure,
+        image_axes,
+        image_name,
+        fontSize (1,1) double {mustBeReal, mustBeFinite} = 14
+        image_width (1,1) double {mustBeReal, mustBeFinite} = 8; % 8 inches
+        image_height (1,1) double {mustBeReal, mustBeFinite} = 6; % 6 inches -> ratio 4:3
+    end
+
 for ax = image_axes 
-    set(ax, "FontSize", 14);
+    set(ax, "FontSize", fontSize);
 end
 
-image_width = 8; % 8 inches
-image_height = 6; % 6 inches -> ratio 4:3
 set(image_figure, 'PaperUnits', 'inches');
 set(image_figure, 'PaperSize', [image_width image_height]);
 
