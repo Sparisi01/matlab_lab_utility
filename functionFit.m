@@ -1,16 +1,15 @@
-% -------------------------------------------------
+% ---------------------------------------------------
 % Funzione per eseguire fit a un modello generico e
 % produrre grafici con numero di parametri variabile. 
 % ---------------------------------------------------
 % DIPENDENZE:
 % - numberToText.m
 % - exportFigure.m
-% - propagation.m
+% - propagation1D.m
 % ---------------------------------------------------
 
 % TODO
 % Finire implementazione showDataArray
-% Individuare istruzione che apre una seconda immagine 
 
 classdef functionFit < handle
 
@@ -19,7 +18,7 @@ classdef functionFit < handle
         datay (:, 1) double {mustBeReal, mustBeFinite}
         sigmax (:, 1) double {mustBeReal, mustBeFinite}
         sigmay (:, 1) double {mustBeReal, mustBeFinite}
-        model (1, 1)
+        model (1, 1) function_handle = @(par, x) par(1) + x * par(2)
         par (:, 1) double {mustBeFinite}
         errpar (:, 1) double
         previousPar (:, 1) double {mustBeFinite}
@@ -96,7 +95,7 @@ classdef functionFit < handle
             this.chi2norm = inf; % CHi quadro normalizzato fit
             this.dof = 0; % Gradi di libertà fit
             this.pValue = 0; % P value fit
-            this.fig = figure(); % Fig dopo aver generato figura e residui
+            this.fig = 0; % Fig dopo aver generato figura e residui
             this.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
             
             % Estetica ----------------------
@@ -302,7 +301,7 @@ classdef functionFit < handle
             yfit = this.model(par, this.datax);
             
             % Propaga incertezze x lungo y
-            sigma_propagata = propagation(@(x) this.model(par, x), this.datax, this.sigmax);
+            sigma_propagata = propagation1D(@(x) this.model(par, x), this.datax, this.sigmax);
             sigmaScarti = sqrt(this.sigmay .^2 + (sigma_propagata).^2); 
             
             % Calcolo Chi quadro e pValue
@@ -348,8 +347,8 @@ classdef functionFit < handle
             
             % Controlla dimensione incertezze -----------------------------
             if (isempty(this.sigmax))
-                this.sigmax = max([0.01*max(this.datax)*ones(size(this.datax)), 0.01*this.datax],[],2);
-                warning("Incertezze su datax non assegnate. Inizializzate all'1%")           
+                this.sigmax = zeros(size(this.datay));
+                warning("Incertezze su datax non assegnate. Inizializzate a 0")           
             else
                 if size(this.sigmax) == [1,1]
                     this.sigmax = ones(size(this.datax)) * this.sigmax;
@@ -358,8 +357,8 @@ classdef functionFit < handle
             
             % Controlla dimensioni sigma e inizializza ---------------------
             if (isempty(this.sigmay))
-                this.sigmay = max([0.01*max(this.datay)*ones(size(this.datay)), 0.01*this.datay],[],2);
-                warning("Incertezze su datay non assegnate. Inizializzate all'1%")        
+                this.sigmay = ones(size(this.datay));
+                warning("Incertezze su datay non assegnate. Inizializzate a un vettore unitario.")        
             else
                 if size(this.sigmay) == [1,1]
                     this.sigmay = ones(size(this.datay)) * this.sigmay;
@@ -569,7 +568,7 @@ classdef functionFit < handle
                     sigmaScarti = sqrt(this.sigmay .^ 2 + (this.par(2) * this.sigmax) .^ 2);
                 else
                     % Derivata numerica del modello per propagazione incertezze                   
-                    sigma_propagata = propagation(@(x) this.model(self.par, x), this.datax, this.sigmax);
+                    sigma_propagata = propagation1D(@(x) this.model(this.par, x), this.datax, this.sigmax);
                     sigmaScarti = sqrt(this.sigmay .^2 + (sigma_propagata).^2);    
                 end
                 
