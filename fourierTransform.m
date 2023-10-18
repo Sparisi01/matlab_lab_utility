@@ -1,3 +1,12 @@
+% -------------------------------------------------
+% Funzione per eseguire agilmente la trasformata
+% di fourier di un set di dati e generare il grafico
+% in ampiezza e fase.
+% ---------------------------------------------------
+% DIPENDENZE:
+% - exportFigure.m
+% ---------------------------------------------------
+
 classdef fourierTransform < handle
     properties
         data (:,1) double {mustBeReal, mustBeFinite}
@@ -15,6 +24,10 @@ classdef fourierTransform < handle
         xAxisAsOmegas (1,1) logical       
         mirrored (1,1) logical
         tollerance (1,1) double {mustBeReal, mustBeFinite}
+        fontSize (1, 1) double {mustBeReal, mustBeFinite}
+        figureWidth (1, 1) double {mustBeReal, mustBeFinite}
+        figureHeight (1, 1) double {mustBeReal, mustBeFinite}
+        verbose (1, :) logical
     end
 
 
@@ -23,9 +36,9 @@ classdef fourierTransform < handle
         % -----------------------------------------------------------------
         
         function this = fourierTransform()
-            this.data = [];
+            this.data = []; 
             this.frequencies = [];
-            this.dt = 1;
+            this.dt = 1; % Intervallo temporale tra i dati
             this.dF = 0;
             this.name = "FFT";
             this.xLabel = "[Hz]";
@@ -36,6 +49,10 @@ classdef fourierTransform < handle
             this.xAxisLim = [0,0];
             this.xAxisAsOmegas = 0;
             this.tollerance = 1e-5;
+            this.fontSize = 14; % Dimensione font sia nelle label che nella box
+            this.figureWidth = 8; % Larghezza immagine salvata in pollici
+            this.figureHeight = 6; % Altezza immagine salvata in pollici 
+            this.verbose = 1;
         end
 
         % -----------------------------------------------------------------
@@ -69,8 +86,7 @@ classdef fourierTransform < handle
             amps = this.amps;
             phases = this.phases;
             frequencies = this.frequencies;
-            dF = this.dF;
-           
+            dF = this.dF;          
         end
         
         % -----------------------------------------------------------------
@@ -96,11 +112,9 @@ classdef fourierTransform < handle
                         
             [frequencies, amps, phases, dF] = this.transform();
             [fig, ax] = plotTransform(this, phases, fileName, 0);
-        end
-
-        % -----------------------------------------------------------------
-        
+        end        
     end
+
     methods (Hidden)
         function [fig, ax] = plotTransform(this, yData, fileName, isAbsPlot)
             arguments
@@ -149,13 +163,11 @@ classdef fourierTransform < handle
             
             title(this.name);           
             ax.FontSize = 14;               
-
+            
+            % Esporta figura
             if (strlength(fileName) > 0)
-                exportFigure(fig, ax, fileName);
-            end
-                    
+                exportFigure(fig, ax, fileName,this.fontSize, this.figureWidth, this.figureHeight);
+            end                   
         end
-
-        % -----------------------------------------------------------------
     end
 end

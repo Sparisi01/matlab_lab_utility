@@ -6,7 +6,6 @@
 % - numberToText.m
 % - exportFigure.m
 % - propagation.m
-% - lsqnonlin.m
 % ---------------------------------------------------
 
 % TODO
