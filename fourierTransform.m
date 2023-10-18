@@ -1,18 +1,20 @@
 classdef fourierTransform < handle
     properties
         data (:,1) double {mustBeReal, mustBeFinite}
-        dt (1,1) double {mustBeReal, mustBeFinite}
         frequencies (:,1) double {mustBeReal, mustBeFinite}
+        dt (1,1) double {mustBeReal, mustBeFinite}        
         amps (:,1) double {mustBeReal, mustBeFinite}
         phases (:,1) double {mustBeReal, mustBeFinite}
-        dF (1,1) double {mustBeReal, mustBeFinite}
+        dF (1,1) double {mustBeReal, mustBeFinite}        
         name (1,1) string
+        xLabel (1,1) string
+        yLabel_phase (1,1) string
+        yLabel_abs (1,1) string
         color (1,3) double {mustBeReal, mustBeFinite}
-        freqlim (1,2) double {mustBeReal, mustBeFinite}
+        xAxisLim (1,2) double {mustBeReal, mustBeFinite}
+        xAxisAsOmegas (1,1) logical       
         mirrored (1,1) logical
-        omegasAsXAxis (1,1) logical 
-        showDots (1,1) logical 
-        showLines (1,1) logical 
+        tollerance (1,1) double {mustBeReal, mustBeFinite}
     end
 
 
@@ -22,103 +24,131 @@ classdef fourierTransform < handle
         
         function this = fourierTransform()
             this.data = [];
-            this.dt = 1;
             this.frequencies = [];
+            this.dt = 1;
             this.dF = 0;
             this.name = "FFT";
+            this.xLabel = "[Hz]";
+            this.yLabel_phase = "\angle{FFT} [deg]";
+            this.yLabel_abs = "|FFT| [V]";
             this.color = [0 0 1];
             this.mirrored = 0;
-            this.freqlim = [0,0];
-            this.omegasAsXAxis = 0;
-            this.showDots = 1;
-            this.showLines = 1;
+            this.xAxisLim = [0,0];
+            this.xAxisAsOmegas = 0;
+            this.tollerance = 1e-5;
         end
 
         % -----------------------------------------------------------------
-        
+        % Utilizzo della funzione FFT per estrarre vettore di ampiezze e fasi dal vettore dati
+        % https://www.gaussianwaves.com/2015/11/interpreting-fft-results-obtaining-magnitude-and-phase-information/           
         function [frequencies, amps, phases, dF] = transform(this)
             arguments
                 this                
             end
-            
-            % frequenza massima                      
-            Fs = 1/this.dt;                                
-            % Incertezza sulle frequenze
-            dF = Fs/length(this.data); 
-            % Vettore frequenze e pulsazioni
-            this.frequencies = (-Fs/2:dF:Fs/2-dF)';
+                     
             % FFT dati
             fft_data = fftshift(fft(this.data));
-            
-            % Vettore Ampiezze e Vettore fasi 
+            % Frequenza massima risolvibile                      
+            Fs = 1/this.dt;                                
+            % Incertezza sulle frequenze
+            this.dF = Fs/length(this.data); 
+           
+            % Vettore frequenze
+            this.frequencies = (-Fs/2:this.dF:Fs/2-this.dF)';
+                       
+            % Vettore Ampiezze
             this.amps = abs(fft_data)/length(this.data);
-            this.phases = angle(fft_data) / pi;
+            
+            % Vettore Fasi   
+            tmp_fft_data = fft_data;   
+            threshold = max(abs(fft_data))*this.tollerance;
+            tmp_fft_data(abs(fft_data)<threshold) = 0;  
+            this.phases = atan2(imag(tmp_fft_data),real(tmp_fft_data))*180/pi; 
+                
             % Output
             amps = this.amps;
             phases = this.phases;
             frequencies = this.frequencies;
+            dF = this.dF;
+           
         end
         
         % -----------------------------------------------------------------
         
-        function [frequencies, phases, amps, dF] = plotTransform(this, fileName)
-            [frequencies, phases, amps, dF] = plotAbsTransform(this, fileName);
-        end
-
-        % -----------------------------------------------------------------
-        
-        function [frequencies, phases, amps, dF] = plotAbsTransform(this, fileName)
+        function [frequencies, phases, amps, dF, fig, ax] = plotAbsTransform(this, fileName)
             arguments
                 this,
                 fileName (1,1) string = ""
             end
-            
-            % Trasformata
-            [frequencies, amps, phases, dF] = this.transform();
                         
+            [frequencies, amps, phases, dF] = this.transform();
+
+            [fig, ax] = plotTransform(this, amps, fileName, 1);
+        end
+
+        % -----------------------------------------------------------------
+        
+        function [frequencies, phases, amps, dF , fig, ax] = plotPhaseTransform(this, fileName)
+            arguments
+                this,
+                fileName (1,1) string = ""
+            end
+                        
+            [frequencies, amps, phases, dF] = this.transform();
+            [fig, ax] = plotTransform(this, phases, fileName, 0);
+        end
+
+        % -----------------------------------------------------------------
+        
+    end
+    methods (Hidden)
+        function [fig, ax] = plotTransform(this, yData, fileName, isAbsPlot)
+            arguments
+                this,               
+                yData (:,1) double {mustBeReal, mustBeFinite},
+                fileName (1,1) string = "",
+                isAbsPlot (1,1) logical = 1,
+            end
+                                               
             fig = figure();
-            ax = axes();
+            ax = axes();            
             hold on
+            axis padded
+            box on
+            grid minor
             
             % Scegli se mostrare frequenze o pulsazioni
-            if this.omegasAsXAxis
-                xAxisData = frequencies*2*pi;
-                dX = dF*2*pi;
-                xLimits = this.freqlim*2*pi;
-                xlabel("Pulsazione [Hz]");
+            if this.xAxisAsOmegas
+                xAxisData = this.frequencies*2*pi;
+                dX = this.dF*2*pi;                
             else
-                xAxisData = frequencies;
-                dX = dF;
-                xLimits = this.freqlim;
-                xlabel("Frequenza [Hz]");
+                xAxisData = this.frequencies;
+                dX = this.dF;                                
             end
-
-            % Disegna punti righe verticali
-            if this.showDots
-                scatter(xAxisData,amps,100,"blue",".");
-            end
-            % Disegna righe verticali
-            if this.showLines
-                for ii = 1:length(frequencies)
-                    line([xAxisData(ii) xAxisData(ii)],[0 amps(ii)],"Color","blue");
-                end
-            end
+            xlabel(this.xLabel);
+            
+            % Plotta dati
+            stem(xAxisData,yData,"filled", "Color", this.color);
             
             % Imposta limiti
-            if this.freqlim == [0,0] 
+            if this.xAxisLim == zeros(1,2) 
                 if this.mirrored
                     xlim([min(xAxisData) - dX, max(xAxisData) + dX]);
                 else
                     xlim([0, max(xAxisData) + dX]);
                 end
             else
-                xlim(sort(xLimits));
+                xlim(sort(this.xAxisLim));
             end
-                       
-            ylabel("Modulo [V]");
+            
+            if isAbsPlot
+                ylabel(this.yLabel_abs);
+            else
+                ylabel(this.yLabel_phase);
+            end
+            
             title(this.name);           
-            ax.FontSize = 14;
-            grid minor    
+            ax.FontSize = 14;               
 
             if (strlength(fileName) > 0)
                 exportFigure(fig, ax, fileName);
@@ -127,71 +157,5 @@ classdef fourierTransform < handle
         end
 
         % -----------------------------------------------------------------
-
-        % -----------------------------------------------------------------
-        
-        function [frequencies, phases, amps, dF] = plotPhaseTransform(this, fileName)
-            arguments
-                this,
-                fileName (1,1) string = ""
-            end
-            
-            % Trasformata
-            [frequencies, amps, phases, dF] = this.transform();
-                        
-            fig = figure();
-            ax = axes();
-            hold on
-            
-            % Scegli se mostrare frequenze o pulsazioni
-            if this.omegasAsXAxis
-                xAxisData = frequencies*2*pi;
-                dX = dF*2*pi;
-                xLimits = this.freqlim*2*pi;
-                xlabel("Pulsazione [Hz]");
-            else
-                xAxisData = frequencies;
-                dX = dF;
-                xLimits = this.freqlim;
-                xlabel("Frequenza [Hz]");
-            end
-
-            % Disegna punti righe verticali
-            if this.showDots
-                scatter(xAxisData,phases,100,"blue",".");
-            end
-            % Disegna righe verticali
-            if this.showLines
-                for ii = 1:length(frequencies)
-                    line([xAxisData(ii) xAxisData(ii)],[0 phases(ii)],"Color","blue");
-                end
-            end
-            
-            % Imposta limiti
-            if this.freqlim == [0,0] 
-                if this.mirrored
-                    xlim([min(xAxisData) - dX, max(xAxisData) + dX]);
-                else
-                    xlim([0, max(xAxisData) + dX]);
-                end
-            else
-                xlim(sort(xLimits));
-            end
-
-            ylim([-1.1 1.1]);
-                       
-            ylabel("Fase/\pi");
-            title(this.name);           
-            ax.FontSize = 14;
-            grid minor    
-
-            if (strlength(fileName) > 0)
-                exportFigure(fig, ax, fileName);
-            end
-                    
-        end
-
-        % -----------------------------------------------------------------
-
     end
 end
