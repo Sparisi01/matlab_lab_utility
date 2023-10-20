@@ -576,7 +576,9 @@ classdef functionFit < handle
 
             if this.showScarti                
                 ax(2) = nexttile([1 1]);
-                
+               
+                box on
+
                 % Propagazione incertezze sugli scarti
                 if isLinearFit
                     sigmaScarti = sqrt(this.sigmay .^ 2 + (this.par(2) * this.sigmax) .^ 2);

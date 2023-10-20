@@ -32,11 +32,14 @@ fitter.sigmay = my_sigmay;
 <summary> fit non-lineare </summary>
 
 ```matlab
+% Istanza classe functionFit
 fitter =  functionFit();
-
+    
+% Dati su cui eseguire il fit
 fitter.datax = my_datax;
 fitter.datay = my_datay;
 
+% Incertezze sui dati
 fitter.sigmax = my_sigmax;
 fitter.sigmay = my_sigmay;
 
@@ -52,11 +55,14 @@ fitter.par = [0,0,0];
 In questo caso specifico il fitter ha una libertà sul segno dell'ampiezza e il valore della fase. È possibile ridurre il range di valori per i parametri, forzando ad esempio l'ampiezza ai soli valori positivi tramite **upperBounds** e **lowerBounds**.
 
 ```matlab
+% Istanza classe functionFit
 fitter =  functionFit();
-
+    
+% Dati su cui eseguire il fit
 fitter.datax = my_datax;
 fitter.datay = my_datay;
 
+% Incertezze sui dati
 fitter.sigmax = my_sigmax;
 fitter.sigmay = my_sigmay;
 
@@ -114,7 +120,7 @@ fitter.reslabely = "Scarti [V]";
 fitter.boxPosition = [0.50 0.75];
 
 % Funzione che esegue il fit, genera l'immagine e la salva in formato png
-[par, errpar, yfit, chi2norm] = fitter.plotModelFit("plots/oscillazione_smorzata");
+[par, errpar, yfit, chi2norm] = fitter.plotModelFit("example_images/esempio_plot.png");
 ```
 
 ![Screenshot](example_images/esempio_plot.png)
@@ -152,12 +158,16 @@ f.dt = my_dt;
 Il grafico generato è altamente customizzabile attraverso parametri di classe. Tutti i parametri sono elencati con nomi autoesplicativi nella sezione **arguments** della classe **fourierTransfrom**. Di seguito un esempio del grafico della trasformata di un segnale sinusoidale a pulsazione 1000Hz.
 
 ```matlab
+% Istanza classe functionFit
 f = fourierTransform();
 
+% Dati su cui eseguire la trasformata
 f.data = my_data;
 
+% Incertezza sui dati
 f.sigmaData = my_sigmaData;
 
+% Intervallo di campionamento
 f.dt = my_dt;
 
 % Visualizza pulsazioni sull'asse x
@@ -167,7 +177,7 @@ ff.xAxisAsOmegas = 1;
 ff.xAxisLim = [600, 1400];
 
 % Esegui trasformata e genera grafico delle ampiezze
-[frequencies, amps, phases, sigmaAmps, sigmaPhases] = ff.plotAbsTransform("./plots/oscillatore_compensato_abs");
+[frequencies, amps, phases, sigmaAmps, sigmaPhases] = ff.plotAbsTransform("example_images/esempio_trasformata.png");
 
 ```
 
