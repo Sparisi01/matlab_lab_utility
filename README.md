@@ -10,8 +10,6 @@ laboratorio della laurea triennale in fisica a unitn. Lo scopo è sempre stato q
 <details>
 <summary> fit lineare </summary>
 
-Di seguito un esempio di fit lineare,
-
 ```matlab
 % Istanza classe functionFit
 fitter =  functionFit();
@@ -125,4 +123,54 @@ fitter.boxPosition = [0.50 0.75];
 
 ## fourierTransform
 
-Work in progress
+**fourierTransfrom** è una classe che permette di eseguire l'algoritmo FFT su un set di dati con calcolo automatico di ampiezze, frequenze e fasi.
+
+<details>
+<summary> trasformata di fourier </summary>
+
+```matlab
+% Istanza classe functionFit
+f = fourierTransform();
+
+% Dati su cui eseguire la trasformata
+f.data = my_data;
+
+% Incertezza sui dati
+f.sigmaData = my_sigmaData;
+
+% Intervallo di campionamento
+f.dt = my_dt;
+
+[frequencies, amps, phases, sigmaAmps, sigmaPhases] = ff.transform();
+```
+
+</details>
+
+<details>
+<summary> grafico trasformata </summary>
+
+Il grafico generato è altamente customizzabile attraverso parametri di classe. Tutti i parametri sono elencati con nomi autoesplicativi nella sezione **arguments** della classe **fourierTransfrom**. Di seguito un esempio del grafico della trasformata di un segnale sinusoidale a pulsazione 1000Hz.
+
+```matlab
+f = fourierTransform();
+
+f.data = my_data;
+
+f.sigmaData = my_sigmaData;
+
+f.dt = my_dt;
+
+% Visualizza pulsazioni sull'asse x
+ff.xAxisAsOmegas = 1;
+
+% Limiti asse x
+ff.xAxisLim = [600, 1400];
+
+% Esegui trasformata e genera grafico delle ampiezze
+[frequencies, amps, phases, sigmaAmps, sigmaPhases] = ff.plotAbsTransform("./plots/oscillatore_compensato_abs");
+
+```
+
+![Screenshot](example_images/esempio_trasformata.png)
+
+</details>
