@@ -40,7 +40,7 @@ fitter.datay = my_datay;
 fitter.sigmax = my_sigmax;
 fitter.sigmay = my_sigmay;
 
-% Fit a un modello sinusoidale
+% Imposta un modello sinusoidale
 fitter.model = @(par, x) par(1)*sin(par(2)*x + par(3));
 
 % Valori iniziali parametri
