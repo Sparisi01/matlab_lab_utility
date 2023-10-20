@@ -9,27 +9,34 @@
 
 classdef fourierTransform < handle
     properties
-        data (:,1) double {mustBeReal, mustBeFinite}
-        frequencies (:,1) double {mustBeReal, mustBeFinite}
-        dt (1,1) double {mustBeReal, mustBeFinite}        
-        amps (:,1) double {mustBeReal, mustBeFinite}
-        phases (:,1) double {mustBeReal, mustBeFinite}
-        dF (1,1) double {mustBeReal, mustBeFinite}        
+        
+        data (:,1) double {mustBeReal, mustBeFinite} 
+        sigmaData (:,1) double {mustBeReal, mustBeFinite} 
+        dt (1,1) double {mustBeReal, mustBeFinite} % Intervallo di tempo tra i campionamenti x
+        tollerance (1,1) double {mustBeReal, mustBeFinite} % Tolleranza sulle ampiezze per evitare errori numerici. Porre a inf per disattivare.
+        verbose (1, :) logical
+
+        % Parametri che vengono riempiti dopo aver chiamato transform con i risultati        
+        frequencies (:,1) double {mustBeReal, mustBeFinite} % Vettore frequenze      
+        amps (:,1) double {mustBeReal, mustBeFinite} % Vettore ampiezze
+        phases (:,1) double {mustBeReal, mustBeFinite} % Vettore fasi
+        dF (1,1) double {mustBeReal, mustBeFinite} % intervallo di frequenza minimo risolvibile
+        sigmaAmps (:,1) double % Vettore incertezze sulle ampiezze
+        sigmaPhases (:,1) double % Vettore incertezze sulle fasi
+
+        % Parametri estetici
         name (1,1) string
         xLabel (1,1) string
         yLabel_phase (1,1) string
         yLabel_abs (1,1) string
         color (1,3) double {mustBeReal, mustBeFinite}
         xAxisLim (1,2) double {mustBeReal, mustBeFinite}
-        xAxisAsOmegas (1,1) logical       
-        mirrored (1,1) logical
-        tollerance (1,1) double {mustBeReal, mustBeFinite}
-        fontSize (1, 1) double {mustBeReal, mustBeFinite}
-        figureWidth (1, 1) double {mustBeReal, mustBeFinite}
-        figureHeight (1, 1) double {mustBeReal, mustBeFinite}
-        verbose (1, :) logical
+        xAxisAsOmegas (1,1) logical % Visualizza pulsazioni sull'asse x invece che frequenze       
+        mirrored (1,1) logical % Visualizza grafico specchiato       
+        fontSize (1, 1) double {mustBeReal, mustBeFinite} % Dimensione font 
+        figureWidth (1, 1) double {mustBeReal, mustBeFinite} % Larghezza immagine salvata in pollici
+        figureHeight (1, 1) double {mustBeReal, mustBeFinite} % Altezza immagine salvata in pollici      
     end
-
 
     methods
         
@@ -37,9 +44,12 @@ classdef fourierTransform < handle
         
         function this = fourierTransform()
             this.data = []; 
+            this.sigmaData = [];
             this.frequencies = [];
             this.dt = 1; % Intervallo temporale tra i dati
             this.dF = 0;
+            this.sigmaAmps = [];
+            this.sigmaPhases = [];
             this.name = "FFT";
             this.xLabel = "[Hz]";
             this.yLabel_phase = "\angle{FFT} [deg]";
@@ -49,22 +59,22 @@ classdef fourierTransform < handle
             this.xAxisLim = [0,0];
             this.xAxisAsOmegas = 0;
             this.tollerance = 1e-5;
-            this.fontSize = 14; % Dimensione font sia nelle label che nella box
-            this.figureWidth = 8; % Larghezza immagine salvata in pollici
-            this.figureHeight = 6; % Altezza immagine salvata in pollici 
+            this.fontSize = 14; 
+            this.figureWidth = 8; 
+            this.figureHeight = 6; 
             this.verbose = 1;
         end
 
         % -----------------------------------------------------------------
         % Utilizzo della funzione FFT per estrarre vettore di ampiezze e fasi dal vettore dati
         % https://www.gaussianwaves.com/2015/11/interpreting-fft-results-obtaining-magnitude-and-phase-information/           
-        function [frequencies, amps, phases, dF] = transform(this)
+        function [frequencies, amps, phases, sigmaAmps, sigmaPhases] = transform(this)
             arguments
                 this                
             end
                      
             % FFT dati
-            fft_data = fftshift(fft(this.data));
+            fft_data = fftshift(fft(this.data))/length(this.data);
             % Frequenza massima risolvibile                      
             Fs = 1/this.dt;                                
             % Incertezza sulle frequenze
@@ -74,43 +84,59 @@ classdef fourierTransform < handle
             this.frequencies = (-Fs/2:this.dF:Fs/2-this.dF)';
                        
             % Vettore Ampiezze
-            this.amps = abs(fft_data)/length(this.data);
+            this.amps = abs(fft_data);
             
             % Vettore Fasi   
             tmp_fft_data = fft_data;   
             threshold = max(abs(fft_data))*this.tollerance;
             tmp_fft_data(abs(fft_data)<threshold) = 0;  
             this.phases = atan2(imag(tmp_fft_data),real(tmp_fft_data))*180/pi; 
-                
+            
+            % Calcolo incertezze tramite propagazione della serie di Fourier                                    
+            
+            % Funzione per gestire le divisioni 0/0
+            function z = custom_division(x,y)                 
+                if (x == 0) + (y == 0) == 2 
+                    z = 1;               
+                else 
+                    z = x./y; 
+                end
+            end
+    
+            this.sigmaAmps = sqrt(2/(length(this.data)+1)) * mean(this.sigmaData) * ones(size(this.data));
+            this.sigmaPhases = (1/sqrt((2*length(this.data)+1)) * mean(this.sigmaData)) ./ ...
+            (real(fft_data).*sqrt(1+custom_division(imag(fft_data),real(fft_data)).^2));
+            
             % Output
             amps = this.amps;
             phases = this.phases;
-            frequencies = this.frequencies;
-            dF = this.dF;          
+            frequencies = this.frequencies;  
+            sigmaAmps = this.sigmaAmps;
+            sigmaPhases = this.sigmaPhases;   
         end
         
         % -----------------------------------------------------------------
         
-        function [frequencies, phases, amps, dF, fig, ax] = plotAbsTransform(this, fileName)
+        function [frequencies, phases, amps,sigmaAmps,sigmaPhases, fig, ax] = plotAbsTransform(this, fileName)
             arguments
                 this,
                 fileName (1,1) string = ""
             end
                         
-            [frequencies, amps, phases, dF] = this.transform();
+            [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
 
             [fig, ax] = plotTransform(this, amps, fileName, 1);
         end
 
         % -----------------------------------------------------------------
         
-        function [frequencies, phases, amps, dF , fig, ax] = plotPhaseTransform(this, fileName)
+        function [frequencies, phases, amps, sigmaAmps, sigmaPhases, fig, ax] = plotPhaseTransform(this, fileName)
             arguments
                 this,
                 fileName (1,1) string = ""
             end
                         
-            [frequencies, amps, phases, dF] = this.transform();
+            [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
             [fig, ax] = plotTransform(this, phases, fileName, 0);
         end        
     end
@@ -124,7 +150,7 @@ classdef fourierTransform < handle
                 isAbsPlot (1,1) logical = 1,
             end
                                                
-            fig = figure();
+            fig = figure('units','inch','position',[0,0,this.figureWidth,this.figureHeight]);
             ax = axes();            
             hold on
             axis padded

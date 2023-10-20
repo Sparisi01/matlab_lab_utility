@@ -368,7 +368,7 @@ classdef functionFit < handle
 
         function [fig, ax] = generatePlotFig(this, isLinearFit)
 
-            fig = figure();
+            fig = figure('units','inch','position',[0,0,this.figureWidth,this.figureHeight]);
             
             % Costrusci tiled layout
             if this.showScarti
@@ -436,15 +436,29 @@ classdef functionFit < handle
             % Imposta dinamicamente i limiti ------------------------------
 
             delta_x = abs(max(this.datax) - min(this.datax));
+            delta_y = abs(max(this.datay) - min(this.datay));
             
+            % Limiti asse X scarti
             if this.xlim(1) >= this.xlim(2)
-                xlim([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]);
+                % Gestione caso asse logaritmico per evitare il passaggio
+                % dei limiti attraverso lo 0
+                if this.logX
+                    xlim(sort([min(this.datax) * 0.2 max(this.datax) * 1.2]));
+                else     
+                    xlim(sort([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]));
+                end
             else
                 xlim([this.xlim(1) this.xlim(2)]);
             end
 
-            if this.ylim(1) >= this.ylim(2)
-                ylim([min(this.datay) - 0.1 * abs(min(this.datay)) max(this.datay) + 0.1 *abs(max(this.datay))]);
+            if this.ylim(1) >= this.ylim(2)  
+                % Gestione caso asse logaritmico per evitare il passaggio
+                % dei limiti attraverso lo 0
+                if this.logY
+                    ylim(sort([min(this.datay) * 0.2 max(this.datay) * 1.2]));
+                else     
+                    ylim(sort([min(this.datay) - 0.1 * delta_y max(this.datay) + 0.1 * delta_y]));
+                end             
             else
                 ylim([this.ylim(1) this.ylim(2)]);
             end
@@ -593,10 +607,25 @@ classdef functionFit < handle
                 end
                                 
                 hold on;
-                
+                                
+                if this.showGrid
+                    grid minor;
+                end
+
+                if this.logX
+                    set(ax(2), 'XScale', 'log')
+                end
+
                 % Linea orizzontale lungo y=0 negli scarti
-                x = [min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x];
-                y = [0 0];
+                % Gestione caso asse logaritmico per evitare il passaggio
+                % delle coordinate attraverso lasse 0
+                if this.logX                   
+                    x = [sort([min(this.datax) * 0.2 max(this.datax) * 1.2])];
+                    y = [0 0];
+                else
+                    x = [min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x];
+                    y = [0 0];
+                end                
                 line(x, y, 'Color', this.modelColor, 'LineStyle', '-',"LineWidth", this.lineWidth)
                 
                 % Plot degli scarti
@@ -612,31 +641,28 @@ classdef functionFit < handle
                
                 % Limiti asse X scarti
                 if this.xlim(1) >= this.xlim(2)
-                    xlim([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]);
+                    % Gestione caso asse logaritmico per evitare passaggio
+                    % dei limiti attraverso lo 0
+                    if this.logX
+                        xlim(sort([min(this.datax) * 0.2 max(this.datax) * 1.2]));
+                    else     
+                        xlim(sort([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]));
+                    end
                 else
                     xlim([this.xlim(1) this.xlim(2)]);
                 end
                 
                 % Limiti asse Y scarti
                 if this.resylim(1) >= this.resylim(2)
-                    ylim([-max(scarto_y .* 2) - max(sigmaScarti) max(scarto_y .* 2) + max(sigmaScarti)]);
+                    tmp_limits = max([abs(max(scarto_y)) + 2*abs(max(sigmaScarti)) abs(min(scarto_y)) + 2*abs(max(sigmaScarti))]);
+                    ylim([-tmp_limits tmp_limits]); % Asse Y scarti simmetrico rispetto allo 0      
                 else
                     ylim([this.resylim(1) this.resylim(2)])
                 end
                 
                 % Label Scarti
                 ylabel(this.reslabely);
-                xlabel(this.labelx);
-                
-                % Asse x scarti
-                if this.logX
-                    set(ax(2), 'XScale', 'log')
-                end
-
-                if this.showGrid
-                    grid minor;
-                end
-
+                xlabel(this.labelx);                                              
             end
 
             % Grafico errore zoom  ----------------------------------------
