@@ -681,7 +681,12 @@ classdef functionFit < handle
                 if this.showGrid
                     grid on;
                 end
-            end            
+            end
+
+            for a = ax
+                set(a, "FontSize", this.fontSize);
+            end
+
         end        
     end
 end
