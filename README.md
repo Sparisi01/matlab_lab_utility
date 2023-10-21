@@ -1,4 +1,4 @@
-# matlab_utility
+# matlab_lab_utility
 
 Questo repository contiene i codici **matlab** sviluppati e utilizzati durante i corsi di
 laboratorio della laurea triennale in fisica a unitn. Lo scopo è sempre stato quello di incorporare tutte le funzionalità utili per l'analisi dati in delle funzioni e/o classi altamente customizzabili. Particolare riguardo è stato posto nella possibilità di generare grafici in maniera rapida e con uno stile consistente.
