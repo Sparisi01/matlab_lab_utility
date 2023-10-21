@@ -3,20 +3,38 @@
 % a singolo parametro. 
 % ---------------------------------------------------
 
-% TODO
-% Rendere l'intervallo infinitesimo dipendente dalla x della derivata
-
-function sigma = propagation1D(model, data, sdata, h)
+function sigma = propagation1D(model, data, sdata)
     arguments
         model (1,1) function_handle
         data (:,1) double {mustBeReal, mustBeFinite}
-        sdata (:,1) double {mustBeReal, mustBeFinite}
-        h (:,1) double {mustBeReal, mustBeFinite, mustBePositive} = 1e8;
+        sdata (:,1) double {mustBeReal, mustBeFinite, mustBeNonnegative}        
     end
 
-    % Derivata numerica del modello per propagazione incertezze
-    d = (max(data) - min(data)) / h;
+    % Metodo differenziale variabile --------------------------------------
+    sigma = zeros(size(data));
+    d_sum = 0;
+
+    % Differenziale modello
     d_model = @(x, dx) (model(x + dx) - model(x))/dx; 
-    slope = d_model(data, d);
-    sigma = slope.*sdata;
+
+    for ii = 1:length(data)
+        if ii == length(data)
+            d = d_sum/(ii-1);
+        else
+            d = data(ii+1) - data(ii);
+            d_sum = d_sum + d;
+        end       
+        
+        slope = d_model(data(ii), d);
+        sigma(ii) = abs(slope.*sdata(ii));        
+    end    
+
+    % Metodo differenziale fisso ------------------------------------------
+    % d = (max(data) - min(data)) / 1e10;
+    % d_model = @(x, dx) (model(x + dx) - model(x))/dx; 
+    % slope = d_model(data, d);
+    % sigma = slope.*sdata;
+
+    
+
 end

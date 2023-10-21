@@ -14,9 +14,9 @@ classdef fourierTransform < handle
     properties
         
         data (:,1) double {mustBeReal, mustBeFinite} 
-        sigmaData (:,1) double {mustBeReal, mustBeFinite} 
+        sigmaData (:,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} 
         dt (1,1) double {mustBeReal, mustBeFinite} % Intervallo di tempo tra i campionamenti x
-        tollerance (1,1) double {mustBeReal, mustBeFinite} % Tolleranza sulle ampiezze per evitare errori numerici. Porre a inf per disattivare.
+        tollerance (1,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} % Tolleranza sulle ampiezze per evitare errori numerici. Porre a inf per disattivare.
         verbose (1, :) logical
 
         % Parametri che vengono riempiti dopo aver chiamato transform con i risultati        
@@ -95,9 +95,16 @@ classdef fourierTransform < handle
             tmp_fft_data(abs(fft_data)<threshold) = 0;  
             this.phases = atan2(imag(tmp_fft_data),real(tmp_fft_data))*180/pi; 
             
-            % Calcolo incertezze tramite propagazione della serie di Fourier                                    
+            % Calcolo incertezze tramite propagazione della serie di Fourier                                                
             
+            % Permetti impostare la sigma costante per tutto il set di dati
+            % passando uno scalare
+            if length(this.sigmaData) == 1
+                this.sigmaData = ones(size(this.data)) * this.sigmaData;            
+            end
+
             % Funzione per gestire le divisioni 0/0
+            % necessaria dopo aver inserito il treshold sulle ampiezze
             function z = custom_division(x,y)                 
                 if (x == 0) + (y == 0) == 2 
                     z = 1;               
@@ -105,8 +112,10 @@ classdef fourierTransform < handle
                     z = x./y; 
                 end
             end
-    
+            
+            % Incertezza ampiezze
             this.sigmaAmps = sqrt(2/(length(this.data)+1)) * mean(this.sigmaData) * ones(size(this.data));
+            % Incertezza fasi
             this.sigmaPhases = (1/sqrt((2*length(this.data)+1)) * mean(this.sigmaData)) ./ ...
             (real(fft_data).*sqrt(1+custom_division(imag(fft_data),real(fft_data)).^2));
             

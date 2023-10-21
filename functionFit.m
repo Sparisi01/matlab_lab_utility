@@ -16,8 +16,8 @@ classdef functionFit < handle
     properties
         datax (:, 1) double {mustBeReal, mustBeFinite}
         datay (:, 1) double {mustBeReal, mustBeFinite}
-        sigmax (:, 1) double {mustBeReal, mustBeFinite}
-        sigmay (:, 1) double {mustBeReal, mustBeFinite}
+        sigmax (:, 1) double {mustBeReal, mustBeFinite, mustBeNonnegative}
+        sigmay (:, 1) double {mustBeReal, mustBeFinite, mustBeNonnegative}
         model (1, 1) function_handle = @(par, x) par(1) + x * par(2)
         par (:, 1) double {mustBeFinite}
         errpar (:, 1) double
