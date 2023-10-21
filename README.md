@@ -120,10 +120,10 @@ fitter.reslabely = "Scarti [V]";
 fitter.boxPosition = [0.50 0.75];
 
 % Funzione che esegue il fit, genera l'immagine e la salva in formato png
-[par, errpar, yfit, chi2norm] = fitter.plotModelFit("example_images/esempio_plot.png");
+[par, errpar, yfit, chi2norm] = fitter.plotModelFit("_example_images/esempio_plot.png");
 ```
 
-![Screenshot](example_images/esempio_plot.png)
+![Screenshot](_example_images/esempio_plot.png)
 
 </details>
 
@@ -177,10 +177,10 @@ ff.xAxisAsOmegas = 1;
 ff.xAxisLim = [600, 1400];
 
 % Esegui trasformata e genera grafico delle ampiezze
-[frequencies, amps, phases, sigmaAmps, sigmaPhases] = ff.plotAbsTransform("example_images/esempio_trasformata.png");
+[frequencies, amps, phases, sigmaAmps, sigmaPhases] = ff.plotAbsTransform("_example_images/esempio_trasformata.png");
 
 ```
 
-![Screenshot](example_images/esempio_trasformata.png)
+![Screenshot](_example_images/esempio_trasformata.png)
 
 </details>
