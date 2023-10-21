@@ -153,7 +153,7 @@ f.dt = my_dt;
 </details>
 
 <details>
-<summary> grafico trasformata </summary>
+<summary> grafico ampiezza trasformata </summary>
 
 Il grafico generato è altamente customizzabile attraverso parametri di classe. Tutti i parametri sono elencati con nomi autoesplicativi nella sezione **arguments** della classe **fourierTransfrom**. Di seguito un esempio del grafico della trasformata di un segnale sinusoidale a pulsazione 1000Hz.
 
@@ -161,7 +161,7 @@ Il grafico generato è altamente customizzabile attraverso parametri di classe. 
 % Istanza classe functionFit
 f = fourierTransform();
 
-% Dati su cui eseguire la trasformata
+% Dati di cui eseguire la trasformata
 f.data = my_data;
 
 % Incertezza sui dati
