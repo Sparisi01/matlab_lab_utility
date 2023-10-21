@@ -3,9 +3,9 @@
 % produrre grafici con numero di parametri variabile. 
 % ---------------------------------------------------
 % DIPENDENZE:
-% - numberToText.m
-% - exportFigure.m
-% - propagation1D.m
+% - ./utils/numberToText.m
+% - ./utils/exportFigure.m
+% - ./utils/propagation1D.m
 % ---------------------------------------------------
 
 % TODO

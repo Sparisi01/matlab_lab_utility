@@ -4,8 +4,11 @@
 % in ampiezza e fase.
 % ---------------------------------------------------
 % DIPENDENZE:
-% - exportFigure.m
+% - ./utils/exportFigure.m
 % ---------------------------------------------------
+
+% TODO
+% Formalizzare propagazione incerteze
 
 classdef fourierTransform < handle
     properties
