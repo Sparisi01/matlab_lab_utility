@@ -135,10 +135,11 @@ classdef functionFit < handle
         end
 
         % Genera immagine plot usando il modello dato
-        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotModelFit(this, file_name)
+        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotModelFit(this, file_name, showFig)
             arguments
                 this
-                file_name (1, 1) string = ""
+                file_name (1, 1) string = "",
+                showFig (1,1) logical = 1
             end
             
             % Salva parametri precedenti al fit
@@ -152,6 +153,11 @@ classdef functionFit < handle
             this.fig = fig;
             this.axes = ax;
 
+            % Rendi visibile figura
+            if showFig
+                set(fig, 'visible', 'on'); 
+            end
+
             % Esporta figura in formato png
             if (strlength(file_name) > 0)
                 exportFigure(fig, ax, file_name, this.fontSize, this.figureWidth, this.figureHeight);
@@ -160,10 +166,11 @@ classdef functionFit < handle
         end
 
         % Genera immagine plot usando il modello lineare
-        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotLinearFit(this, file_name)
+        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotLinearFit(this, file_name, showFig)
             arguments
                 this
-                file_name (1, 1) string = ""
+                file_name (1, 1) string = "",
+                showFig (1,1) logical = 1
             end
             
             % Salva parametri precedenti al fit
@@ -176,7 +183,12 @@ classdef functionFit < handle
             [fig, ax] = generatePlotFig(this, true);
             this.fig = fig;
             this.axes = ax;
-
+            
+            % Rendi visibile figura
+            if showFig
+                set(fig, 'visible', 'on'); 
+            end
+            
             % Esporta figura in formato png
             if (strlength(file_name) > 0)
                 exportFigure(fig, ax, file_name, this.fontSize, this.figureWidth, this.figureHeight);
@@ -368,7 +380,7 @@ classdef functionFit < handle
 
         function [fig, ax] = generatePlotFig(this, isLinearFit)
 
-            fig = figure('units','inch','position',[0,0,this.figureWidth,this.figureHeight]);
+            fig = figure('units','inch','position',[0,0,this.figureWidth,this.figureHeight],'visible','off');
             
             % Costrusci tiled layout
             if this.showScarti

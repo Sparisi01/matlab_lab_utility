@@ -26,7 +26,11 @@ classdef fourierTransform < handle
         dF (1,1) double {mustBeReal, mustBeFinite} % intervallo di frequenza minimo risolvibile
         sigmaAmps (:,1) double % Vettore incertezze sulle ampiezze
         sigmaPhases (:,1) double % Vettore incertezze sulle fasi
-
+        
+        % Parametri peak detection
+        peak_detection_centro_index (1,1) double
+        peak_detection_interval_index (1,1) double
+        
         % Parametri estetici
         name (1,1) string
         xLabel (1,1) string
@@ -53,6 +57,8 @@ classdef fourierTransform < handle
             this.dF = 0;
             this.sigmaAmps = [];
             this.sigmaPhases = [];
+            this.peak_detection_centro_index = inf;
+            this.peak_detection_interval_index = inf;
             this.name = "FFT";
             this.xLabel = "[Hz]";
             this.yLabel_phase = "\angle{FFT} [deg]";
@@ -129,48 +135,79 @@ classdef fourierTransform < handle
         
         % -----------------------------------------------------------------
         
-        function [frequencies, phases, amps,sigmaAmps,sigmaPhases, fig, ax] = plotAbsTransform(this, fileName)
+        function [frequencies, phases, amps,sigmaAmps,sigmaPhases, fig, ax] = plotAbsTransform(this, fileName, showFig)
             arguments
                 this,
-                fileName (1,1) string = ""
+                fileName (1,1) string = "",
+                showFig (1,1) logical = 1
             end
                         
             [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
 
-            [fig, ax] = plotTransform(this, amps, fileName, 1);
+            [fig, ax] = plotTransform(this, amps,1);
+
+            % Rendi visibile figura
+            if showFig
+                set(fig, 'visible', 'on'); 
+            end
+
+            % Esporta figura
+            if (strlength(fileName) > 0)
+                exportFigure(fig, ax, fileName,this.fontSize, this.figureWidth, this.figureHeight);
+            end 
         end
 
         % -----------------------------------------------------------------
         
-        function [frequencies, phases, amps, sigmaAmps, sigmaPhases, fig, ax] = plotPhaseTransform(this, fileName)
+        function [frequencies, phases, amps, sigmaAmps, sigmaPhases, fig, ax] = plotPhaseTransform(this, fileName, showFig)
             arguments
                 this,
-                fileName (1,1) string = ""
+                fileName (1,1) string = "",
+                showFig (1,1) logical = 1
             end
                         
             [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
-            [fig, ax] = plotTransform(this, phases, fileName, 0);
+            [fig, ax] = plotTransform(this, phases, 0);
+            
+            % Rendi visibile figura
+            if showFig
+                set(fig, 'visible', 'on'); 
+            end
+
+            % Esporta figura
+            if (strlength(fileName) > 0)
+                exportFigure(fig, ax, fileName,this.fontSize, this.figureWidth, this.figureHeight);
+            end 
         end        
 
         % -----------------------------------------------------------------
         
-        function [frequenze_media, frequenze_sigma] = peakIdentifier(this, intervallo)
+        function [frequenze_media, frequenze_sigma, fig, ax] = peakDetection(this, fileName, showFig)
             arguments
                 this,
-                intervallo (:,2) {mustBeReal, mustBeNonnegative, mustBeFinite} = [0,0] 
+                fileName (1,1) string = "",
+                showFig (1,1) logical = 1,                
             end
                         
             [~,~,~,~,~] = this.transform();
+            [~,I] = max(this.amps);               
             
-            if intervallo == [0,0]
-                [~,I] = max(this.amps);
-                intervallo_up = I+40;
-                intervallo_do = I-40;         
-            else
-                intervallo = sort(intervallo);
-                intervallo_up = intervallo(1);
-                intervallo_do = intervallo(2);     
+            index_centro = this.peak_detection_centro_index;
+            intervallo = this.peak_detection_interval_index;
+            
+            % Fissa valori di default se non impostati
+            if this.peak_detection_centro_index == inf               
+                index_centro = I;
             end
+
+            if this.peak_detection_interval_index == inf    
+                intervallo = 4;                      
+            end
+            
+            % Definizione intervallo attorno al centro
+            intervallo_up = index_centro + intervallo;
+            intervallo_do = index_centro - intervallo;     
+            
                 
             % Seleziona solo dati nell'intorno del picco selezionato 
             tmp_freq = this.frequencies(intervallo_do:intervallo_up);
@@ -182,19 +219,47 @@ classdef fourierTransform < handle
             frequenzequadre_media =  sum((tmp_freq.^2).* densita_probabilita_freq);
             frequenze_var = frequenzequadre_media - frequenze_media^2;
             frequenze_sigma = sqrt(frequenze_var);
+            
+            % Mostra o no figura
+            if showFig || (strlength(fileName) > 0)
+
+                save_axis_lim = this.xAxisLim;
+                save_xAxisAsOmegas = this.xAxisAsOmegas;
+                               
+                this.xAxisAsOmegas = 0;
+                this.xAxisLim = [this.frequencies(I) - this.dF*intervallo*4 this.frequencies(I) + this.dF*intervallo*4];
+
+                % Genera grafico
+                [fig, ax] = plotTransform(this, this.amps,1);
+                fplot(ax,@(f) (sqrt(2*pi*frequenze_var)*sum(tmp_amps))^(-1)*exp(-0.5*(f-frequenze_media)^2/frequenze_var));
+                
+                % Mostra figura
+                if showFig
+                    set(fig, 'visible', 'on'); 
+                end
+                
+                % Salva figura
+                if (strlength(fileName) > 0)
+                    exportFigure(fig, ax, fileName,this.fontSize, this.figureWidth, this.figureHeight);               
+                end  
+
+                this.xAxisLim = save_axis_lim;
+                this.xAxisAsOmegas = save_xAxisAsOmegas;
+            end
+
         end        
     end
 
     methods (Hidden)
-        function [fig, ax] = plotTransform(this, yData, fileName, isAbsPlot)
+        function [fig, ax] = plotTransform(this, yData, isAbsPlot)
             arguments
                 this,               
-                yData (:,1) double {mustBeReal, mustBeFinite},
-                fileName (1,1) string = "",
+                yData (:,1) double {mustBeReal, mustBeFinite},                
                 isAbsPlot (1,1) logical = 1,
             end
                                                
-            fig = figure('units','inch','position',[0,0,this.figureWidth,this.figureHeight]);
+            fig = figure('units','inch','position',[0,0,this.figureWidth,this.figureHeight],'visible','off');
+            
             ax = axes();            
             hold on
             axis padded
@@ -233,11 +298,7 @@ classdef fourierTransform < handle
             
             title(this.name);           
             ax.FontSize = 14;               
-            
-            % Esporta figura
-            if (strlength(fileName) > 0)
-                exportFigure(fig, ax, fileName,this.fontSize, this.figureWidth, this.figureHeight);
-            end                   
+                                          
         end
     end
 end
