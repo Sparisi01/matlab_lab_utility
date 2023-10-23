@@ -151,6 +151,38 @@ classdef fourierTransform < handle
             [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
             [fig, ax] = plotTransform(this, phases, fileName, 0);
         end        
+
+        % -----------------------------------------------------------------
+        
+        function [frequenze_media, frequenze_sigma] = peakIdentifier(this, intervallo)
+            arguments
+                this,
+                intervallo (:,2) {mustBeReal, mustBeNonnegative, mustBeFinite} = [0,0] 
+            end
+                        
+            [~,~,~,~,~] = this.transform();
+            
+            if intervallo == [0,0]
+                [~,I] = max(this.amps);
+                intervallo_up = I+40;
+                intervallo_do = I-40;         
+            else
+                intervallo = sort(intervallo);
+                intervallo_up = intervallo(1);
+                intervallo_do = intervallo(2);     
+            end
+                
+            % Seleziona solo dati nell'intorno del picco selezionato 
+            tmp_freq = this.frequencies(intervallo_do:intervallo_up);
+            tmp_amps = this.amps(intervallo_do:intervallo_up);
+
+            % Calcolo media e sigma       
+            densita_probabilita_freq = tmp_amps/sum(tmp_amps);
+            frequenze_media = sum(tmp_freq .* densita_probabilita_freq);
+            frequenzequadre_media =  sum((tmp_freq.^2).* densita_probabilita_freq);
+            frequenze_var = frequenzequadre_media - frequenze_media^2;
+            frequenze_sigma = sqrt(frequenze_var);
+        end        
     end
 
     methods (Hidden)
