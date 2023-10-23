@@ -184,3 +184,26 @@ ff.xAxisLim = [600, 1400];
 ![Screenshot](_example_images/esempio_trasformata.png)
 
 </details>
+
+<details>
+<summary> studio automatico del picco </summary>
+
+```matlab
+% Istanza classe functionFit
+f = fourierTransform();
+
+% Dati di cui eseguire la trasformata
+f.data = my_data;
+
+% Incertezza sui dati
+f.sigmaData = my_sigmaData;
+
+% Intervallo di campionamento
+f.dt = my_dt;
+
+% Rileva picco e salva immagine con gaussiana
+[picco_media, picco_sigma] ff.peakDetection("_example_images/picco.png");
+
+```
+
+</details>
