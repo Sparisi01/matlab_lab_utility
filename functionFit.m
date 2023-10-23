@@ -135,7 +135,7 @@ classdef functionFit < handle
         end
 
         % Genera immagine plot usando il modello dato
-        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotModelFit(this, file_name, showFig)
+        function [par, errpar, yfit, chi2norm, dof, pValue, fig, ax] = plotModelFit(this, file_name, showFig)
             arguments
                 this
                 file_name (1, 1) string = "",
@@ -166,7 +166,7 @@ classdef functionFit < handle
         end
 
         % Genera immagine plot usando il modello lineare
-        function [par, errpar, yfit, chi2norm, dof, pValue, fig] = plotLinearFit(this, file_name, showFig)
+        function [par, errpar, yfit, chi2norm, dof, pValue, fig, ax] = plotLinearFit(this, file_name, showFig)
             arguments
                 this
                 file_name (1, 1) string = "",

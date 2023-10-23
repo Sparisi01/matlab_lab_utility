@@ -5,6 +5,7 @@
 % ---------------------------------------------------
 % DIPENDENZE:
 % - ./utils/exportFigure.m
+% - ./functionFit.m
 % ---------------------------------------------------
 
 % TODO
@@ -15,7 +16,7 @@ classdef fourierTransform < handle
         
         data (:,1) double {mustBeReal, mustBeFinite} 
         sigmaData (:,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} 
-        dt (1,1) double {mustBeReal, mustBeFinite} % Intervallo di tempo tra i campionamenti x
+        dt (1,1) double {mustBeReal, mustBeFinite} % Intervallo di campionamento
         tollerance (1,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} % Tolleranza sulle ampiezze per evitare errori numerici. Porre a inf per disattivare.
         verbose (1, :) logical
 
@@ -28,8 +29,10 @@ classdef fourierTransform < handle
         sigmaPhases (:,1) double % Vettore incertezze sulle fasi
         
         % Parametri peak detection
-        peak_detection_centro_index (1,1) double
-        peak_detection_interval_index (1,1) double
+        peak_detection_centro_index (1,1) double 
+        peak_detection_interval_index (1,1) double 
+        peak_mean (1,1) double % Valore medio picco
+        peak_sigma (1,1) double % Sigma picco
         
         % Parametri estetici
         name (1,1) string
@@ -53,12 +56,14 @@ classdef fourierTransform < handle
             this.data = []; 
             this.sigmaData = [];
             this.frequencies = [];
-            this.dt = 1; % Intervallo temporale tra i dati
+            this.dt = 1; 
             this.dF = 0;
             this.sigmaAmps = [];
             this.sigmaPhases = [];
             this.peak_detection_centro_index = inf;
             this.peak_detection_interval_index = inf;
+            this.peak_mean = inf;
+            this.peak_sigma = inf;
             this.name = "FFT";
             this.xLabel = "[Hz]";
             this.yLabel_phase = "\angle{FFT} [deg]";
@@ -182,71 +187,76 @@ classdef fourierTransform < handle
 
         % -----------------------------------------------------------------
         
-        function [frequenze_media, frequenze_sigma, fig, ax] = peakDetection(this, fileName, showFig)
+        function [peak_mean, peak_sigma, fig, ax] = peakDetection(this, fileName, showFig)
             arguments
                 this,
                 fileName (1,1) string = "",
-                showFig (1,1) logical = 1,                
+                showFig (1,1) logical = 0,                
             end
                         
             [~,~,~,~,~] = this.transform();
-            [~,I] = max(this.amps);               
-            
+                                      
             index_centro = this.peak_detection_centro_index;
             intervallo = this.peak_detection_interval_index;
             
             % Fissa valori di default se non impostati
-            if this.peak_detection_centro_index == inf               
+            if this.peak_detection_centro_index == inf 
+                [~,I] = max(this.amps);
                 index_centro = I;
             end
 
             if this.peak_detection_interval_index == inf    
-                intervallo = 4;                      
+                intervallo = 10;                      
             end
             
             % Definizione intervallo attorno al centro
             intervallo_up = index_centro + intervallo;
             intervallo_do = index_centro - intervallo;     
-            
-                
+                           
             % Seleziona solo dati nell'intorno del picco selezionato 
             tmp_freq = this.frequencies(intervallo_do:intervallo_up);
             tmp_amps = this.amps(intervallo_do:intervallo_up);
 
-            % Calcolo media e sigma       
-            densita_probabilita_freq = tmp_amps/sum(tmp_amps);
-            frequenze_media = sum(tmp_freq .* densita_probabilita_freq);
-            frequenzequadre_media =  sum((tmp_freq.^2).* densita_probabilita_freq);
-            frequenze_var = frequenzequadre_media - frequenze_media^2;
-            frequenze_sigma = sqrt(frequenze_var);
+            % Calcolo media e varianza       
+            probability_density_freq = tmp_amps/sum(tmp_amps);
+            peak_mean = sum(tmp_freq .* probability_density_freq);
+            peak_square_mean =  sum((tmp_freq.^2).* probability_density_freq);
+            peak_var = peak_square_mean - peak_mean.^2;
+
+            % Fit picco a una gaussiana
+            fitter = functionFit();
+            fitter.datax = tmp_freq;
+            fitter.datay = tmp_amps;
+            fitter.sigmax = 1;
+            fitter.sigmay = 1;
+            fitter.model = @(par, f) (sqrt(2*pi*par(1))*par(3)).^(-1).*exp(-0.5*(f-par(2)).^2/par(1)) + par(4);
+            fitter.par = [peak_var peak_mean 1 0];
+            fitter.verbose = 0;
             
-            % Mostra o no figura
             if showFig || (strlength(fileName) > 0)
-
-                save_axis_lim = this.xAxisLim;
-                save_xAxisAsOmegas = this.xAxisAsOmegas;
-                               
-                this.xAxisAsOmegas = 0;
-                this.xAxisLim = [this.frequencies(I) - this.dF*intervallo*4 this.frequencies(I) + this.dF*intervallo*4];
-
-                % Genera grafico
-                [fig, ax] = plotTransform(this, this.amps,1);
-                fplot(ax,@(f) (sqrt(2*pi*frequenze_var)*sum(tmp_amps))^(-1)*exp(-0.5*(f-frequenze_media)^2/frequenze_var));
-                
-                % Mostra figura
-                if showFig
-                    set(fig, 'visible', 'on'); 
-                end
-                
-                % Salva figura
-                if (strlength(fileName) > 0)
-                    exportFigure(fig, ax, fileName,this.fontSize, this.figureWidth, this.figureHeight);               
-                end  
-
-                this.xAxisLim = save_axis_lim;
-                this.xAxisAsOmegas = save_xAxisAsOmegas;
-            end
-
+                fitter.labelx = "Frequenza [Hz]";
+                fitter.labely = "Ampiezza FFT";
+                fitter.name = "Picco";
+                fitter.showChi = 0;
+                fitter.showScarti = 0;
+                fitter.showParArray = [1,1,0,0];
+                fitter.boxPosition = [0.55 0.86];
+                fitter.parnames = ["\sigma^2","\mu","",""];
+                fitter.units = ["Hz^2","Hz","",""];
+                [par, ~, ~, ~, ~, ~, fig, ax] = fitter.plotModelFit(fileName, showFig);
+                % Output
+                peak_sigma = sqrt(par(1));
+                peak_mean = par(2);   
+                this.peak_mean = peak_mean;
+                this.peak_sigma = peak_sigma;
+            else                
+                [par, ~, ~, ~, ~, ~, ~] = fitter.modelFit();
+                % Output
+                peak_sigma = sqrt(par(1));
+                peak_mean = par(2);
+                this.peak_mean = peak_mean;
+                this.peak_sigma = peak_sigma;
+            end         
         end        
     end
 
