@@ -135,7 +135,7 @@ fitter.boxPosition = [0.50 0.75];
 <summary> trasformata di fourier </summary>
 
 ```matlab
-% Istanza classe functionFit
+% Istanza classe fourierTransform
 f = fourierTransform();
 
 % Dati su cui eseguire la trasformata
@@ -158,7 +158,7 @@ f.dt = my_dt;
 Il grafico generato è altamente customizzabile attraverso parametri di classe. Tutti i parametri sono elencati con nomi autoesplicativi nella sezione **arguments** della classe **fourierTransfrom**. Di seguito un esempio del grafico della trasformata di un segnale sinusoidale a pulsazione 1000Hz.
 
 ```matlab
-% Istanza classe functionFit
+% Istanza classe fourierTransform
 f = fourierTransform();
 
 % Dati di cui eseguire la trasformata
@@ -189,7 +189,7 @@ ff.xAxisLim = [600, 1400];
 <summary> studio automatico del picco </summary>
 
 ```matlab
-% Istanza classe functionFit
+% Istanza classe fourierTransform
 f = fourierTransform();
 
 % Dati di cui eseguire la trasformata
@@ -202,7 +202,7 @@ f.sigmaData = my_sigmaData;
 f.dt = my_dt;
 
 % Rileva picco e salva immagine con gaussiana
-[picco_media, picco_sigma] ff.peakDetection("_example_images/picco.png");
+[picco_media, picco_sigma] = ff.peakDetection("_example_images/picco.png");
 
 ```
 
