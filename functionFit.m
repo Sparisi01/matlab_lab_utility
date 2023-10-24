@@ -305,7 +305,7 @@ classdef functionFit < handle
             
             % Fit non lineare Libreria Matlab
             [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, this.par, tmp_lb, tmp_ub, options, this.datax, this.datay, this.sigmay);
-                                 
+                      
             % Gradi di liberta
             dof = (length(this.datax) - length(par));
             
@@ -328,6 +328,7 @@ classdef functionFit < handle
             var = diag(covar);
             sigma = sqrt(var);
             sigmaf = full(sigma);
+            
             errpar = sigmaf * sqrt(chi2norm);           
                         
             % Assegna variabili oggetto

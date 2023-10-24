@@ -187,11 +187,9 @@ classdef fourierTransform < handle
 
         % -----------------------------------------------------------------
         
-        function [peak_mean, peak_sigma, fig, ax] = peakDetection(this, fileName, showFig)
+        function [peak_mean, peak_sigma] = peakDetection(this)
             arguments
-                this,
-                fileName (1,1) string = "",
-                showFig (1,1) logical = 0,                
+                this                              
             end
                         
             [~,~,~,~,~] = this.transform();
@@ -200,13 +198,14 @@ classdef fourierTransform < handle
             intervallo = this.peak_detection_interval_index;
             
             % Fissa valori di default se non impostati
+            index_zero = round(length(this.amps)/2 + 1);
             if this.peak_detection_centro_index == inf 
-                [~,I] = max(this.amps);
-                index_centro = I;
+                [~,I] = max(this.amps(index_zero:end));
+                index_centro = index_zero + I;
             end
 
             if this.peak_detection_interval_index == inf    
-                intervallo = 10;                      
+                intervallo = 15;                      
             end
             
             % Definizione intervallo attorno al centro
@@ -216,47 +215,15 @@ classdef fourierTransform < handle
             % Seleziona solo dati nell'intorno del picco selezionato 
             tmp_freq = this.frequencies(intervallo_do:intervallo_up);
             tmp_amps = this.amps(intervallo_do:intervallo_up);
+            tmp_phases = this.phases(intervallo_do:intervallo_up);
 
             % Calcolo media e varianza       
             probability_density_freq = tmp_amps/sum(tmp_amps);
             peak_mean = sum(tmp_freq .* probability_density_freq);
-            peak_square_mean =  sum((tmp_freq.^2).* probability_density_freq);
-            peak_var = peak_square_mean - peak_mean.^2;
-
-            % Fit picco a una gaussiana
-            fitter = functionFit();
-            fitter.datax = tmp_freq;
-            fitter.datay = tmp_amps;
-            fitter.sigmax = 1;
-            fitter.sigmay = 1;
-            fitter.model = @(par, f) (sqrt(2*pi*par(1))*par(3)).^(-1).*exp(-0.5*(f-par(2)).^2/par(1)) + par(4);
-            fitter.par = [peak_var peak_mean 1 0];
-            fitter.verbose = 0;
-            
-            if showFig || (strlength(fileName) > 0)
-                fitter.labelx = "Frequenza [Hz]";
-                fitter.labely = "Ampiezza FFT";
-                fitter.name = "Picco";
-                fitter.showChi = 0;
-                fitter.showScarti = 0;
-                fitter.showParArray = [1,1,0,0];
-                fitter.boxPosition = [0.55 0.86];
-                fitter.parnames = ["\sigma^2","\mu","",""];
-                fitter.units = ["Hz^2","Hz","",""];
-                [par, ~, ~, ~, ~, ~, fig, ax] = fitter.plotModelFit(fileName, showFig);
-                % Output
-                peak_sigma = sqrt(par(1));
-                peak_mean = par(2);   
-                this.peak_mean = peak_mean;
-                this.peak_sigma = peak_sigma;
-            else                
-                [par, ~, ~, ~, ~, ~, ~] = fitter.modelFit();
-                % Output
-                peak_sigma = sqrt(par(1));
-                peak_mean = par(2);
-                this.peak_mean = peak_mean;
-                this.peak_sigma = peak_sigma;
-            end         
+            peak_sigma = this.dF/sqrt(12); 
+ 
+            this.peak_mean = peak_mean;
+            this.peak_sigma = peak_sigma;
         end        
     end
 
@@ -271,11 +238,11 @@ classdef fourierTransform < handle
             fig = figure('units','inch','position',[0,0,this.figureWidth,this.figureHeight],'visible','off');
             
             ax = axes();            
-            hold on
+            hold on           
             axis padded
             box on
-            grid minor
-            
+            grid minor           
+
             % Scegli se mostrare frequenze o pulsazioni
             if this.xAxisAsOmegas
                 xAxisData = this.frequencies*2*pi;
