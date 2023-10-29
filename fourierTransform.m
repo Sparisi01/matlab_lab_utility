@@ -33,7 +33,11 @@ classdef fourierTransform < handle
         peak_detection_interval_index (1,1) double 
         peak_mean (1,1) double % Valore medio picco
         peak_sigma (1,1) double % Sigma picco
-        
+        peak_amp (1,1) double % Ampiezza picco
+        peak_phase (1,1) double % Fase picco
+        peak_amp_sigma (1,1) double
+        peak_phase_sigma (1,1) double
+
         % Parametri estetici
         name (1,1) string
         xLabel (1,1) string
@@ -64,6 +68,10 @@ classdef fourierTransform < handle
             this.peak_detection_interval_index = inf;
             this.peak_mean = inf;
             this.peak_sigma = inf;
+            this.peak_amp = inf;
+            this.peak_amp_sigma = inf;
+            this.peak_phase = inf;
+            this.peak_phase_sigma = inf;
             this.name = "FFT";
             this.xLabel = "[Hz]";
             this.yLabel_phase = "\angle{FFT} [deg]";
@@ -98,21 +106,15 @@ classdef fourierTransform < handle
             this.frequencies = (-Fs/2:this.dF:Fs/2-this.dF)';
                        
             % Vettore Ampiezze
-            this.amps = abs(fft_data);
-            
-            % Vettore Fasi   
-            tmp_fft_data = fft_data;   
-            threshold = max(abs(fft_data))*this.tollerance;
-            tmp_fft_data(abs(fft_data)<threshold) = 0;  
-            this.phases = atan2(imag(tmp_fft_data),real(tmp_fft_data))*180/pi; 
-            
-            % Calcolo incertezze tramite propagazione della serie di Fourier                                                
+            this.amps = abs(fft_data);            
             
             % Permetti impostare la sigma costante per tutto il set di dati
             % passando uno scalare
             if length(this.sigmaData) == 1
                 this.sigmaData = ones(size(this.data)) * this.sigmaData;            
             end
+
+            this.sigmaData = abs(this.sigmaData);
 
             % Funzione per gestire le divisioni 0/0
             % necessaria dopo aver inserito il treshold sulle ampiezze
@@ -123,13 +125,24 @@ classdef fourierTransform < handle
                     z = x./y; 
                 end
             end
+
+            % Calcolo incertezze tramite propagazione della serie di Fourier                                                
+            FFT_var = fftshift(fft(this.sigmaData.^2))/length(this.sigmaData);
+            FFT_sigma_real = sqrt(abs(real(FFT_var)));
+            FFT_sigma_imag = sqrt(abs(imag(FFT_var)));
+            FFT_real = real(fft_data);
+            FFT_imag = imag(fft_data);       
             
-            % Incertezza ampiezze
-            this.sigmaAmps = sqrt(2/(length(this.data)+1)) * mean(this.sigmaData) * ones(size(this.data));
-            % Incertezza fasi
-            this.sigmaPhases = (1/sqrt((2*length(this.data)+1)) * mean(this.sigmaData)) ./ ...
-            (real(fft_data).*sqrt(1+custom_division(imag(fft_data),real(fft_data)).^2));
-            
+            % Incertezza ampiezza e fase trasformata
+            this.sigmaAmps = 1./(sqrt(FFT_real.^2 + FFT_imag.^2)) .* sqrt((FFT_real.*FFT_sigma_real).^2 + (FFT_imag.*FFT_sigma_imag).^2); 
+            this.sigmaPhases = 1./(1+custom_division(FFT_imag,FFT_real).^2).*sqrt((1./FFT_real .* FFT_sigma_imag).^2 + (FFT_imag./FFT_real.^2 .* FFT_sigma_real).^2)*180/pi;
+                   
+            % Vettore Fasi con trasholds per rimuovere errori di computazione  
+            tmp_fft_data = fft_data;   
+            threshold = max(abs(fft_data))*this.tollerance;
+            tmp_fft_data(abs(fft_data)<threshold) = 0;  
+            this.phases = atan2(imag(tmp_fft_data),real(tmp_fft_data))*180/pi; 
+
             % Output
             amps = this.amps;
             phases = this.phases;
@@ -144,13 +157,13 @@ classdef fourierTransform < handle
             arguments
                 this,
                 fileName (1,1) string = "",
-                showFig (1,1) logical = 1
+                showFig (1,1) logical = 0
             end
-                        
+            
             [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
 
             [fig, ax] = plotTransform(this, amps,1);
-
+                        
             % Rendi visibile figura
             if showFig
                 set(fig, 'visible', 'on'); 
@@ -168,7 +181,7 @@ classdef fourierTransform < handle
             arguments
                 this,
                 fileName (1,1) string = "",
-                showFig (1,1) logical = 1
+                showFig (1,1) logical = 0
             end
                         
             [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
@@ -187,13 +200,13 @@ classdef fourierTransform < handle
 
         % -----------------------------------------------------------------
         
-        function [peak_mean, peak_sigma] = peakDetection(this)
+        function [peak_mean, peak_sigma, peak_amp, peak_amp_sigma, peak_phase, peak_phase_sigma] = peakDetection(this)
             arguments
                 this                              
             end
                         
             [~,~,~,~,~] = this.transform();
-                                      
+                   
             index_centro = this.peak_detection_centro_index;
             intervallo = this.peak_detection_interval_index;
             
@@ -205,7 +218,7 @@ classdef fourierTransform < handle
             end
 
             if this.peak_detection_interval_index == inf    
-                intervallo = 15;                      
+                intervallo = 10;                      
             end
             
             % Definizione intervallo attorno al centro
@@ -215,15 +228,31 @@ classdef fourierTransform < handle
             % Seleziona solo dati nell'intorno del picco selezionato 
             tmp_freq = this.frequencies(intervallo_do:intervallo_up);
             tmp_amps = this.amps(intervallo_do:intervallo_up);
+            tmp_s_amps = this.sigmaAmps(intervallo_do:intervallo_up);
             tmp_phases = this.phases(intervallo_do:intervallo_up);
-
-            % Calcolo media e varianza       
+            
+            % Calcolo media e dmedia per il picco       
             probability_density_freq = tmp_amps/sum(tmp_amps);
+            s_probability_density_freq = (sum(tmp_amps) - tmp_amps)/(sum(tmp_amps)^2).*tmp_s_amps;
             peak_mean = sum(tmp_freq .* probability_density_freq);
-            peak_sigma = this.dF/sqrt(12); 
- 
+            peak_sigma = sqrt(sum(s_probability_density_freq.^2) + this.dF^2/12); 
+            
             this.peak_mean = peak_mean;
             this.peak_sigma = peak_sigma;
+
+            % Interpolazione lineare ampiezza picco
+            peak_amp = linearSampling(tmp_freq,tmp_amps,peak_mean);
+            peak_amp_sigma = this.sigmaAmps(index_centro);
+            
+            % Stima fase con nearest point
+            peak_phase = tmp_phases(intervallo);
+            peak_phase_sigma = this.sigmaPhases(index_centro);
+            
+            this.peak_amp = peak_amp;
+            this.peak_amp_sigma = peak_amp_sigma;
+            this.peak_phase = peak_phase;
+            this.peak_phase_sigma = peak_phase_sigma;
+            
         end        
     end
 
