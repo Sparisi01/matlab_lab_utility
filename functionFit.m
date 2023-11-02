@@ -6,6 +6,7 @@
 % - ./utils/numberToText.m
 % - ./utils/exportFigure.m
 % - ./utils/propagation1D.m
+% - ./utils/avoidOversampling.m
 % ---------------------------------------------------
 
 % TODO
@@ -26,6 +27,7 @@ classdef functionFit < handle
         lowerBounds (:, 1) double
         units (:, 1) string
         parnames (:, 1) string
+        noOversampling (1,1) logical
         yfit (:, 1) double {mustBeReal, mustBeFinite}
         chi2norm (1, 1) double {mustBeNonnegative}
         fig (1, 1)
@@ -89,7 +91,8 @@ classdef functionFit < handle
             this.lowerBounds = []; % LowerBound parametri
             this.units = []; % Units for parameters in legend box
             this.parnames = []; % Parameters name in legend box
-            
+            this.noOversampling = 1; 
+
             % Risultati fit  ----------------
             this.yfit = []; % Y calcolati post regressione con parametri ottimizzati
             this.chi2norm = inf; % CHi quadro normalizzato fit
@@ -202,6 +205,11 @@ classdef functionFit < handle
             % Contolla validità parametri
             safetyCheck(this)
 
+            % Elimina oversampling dai dati
+            if(this.noOversampling)
+                [this.datax, this.datay, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmay);
+            end
+
             data_x = this.datax;
             data_y = this.datay;
             sigma_x = this.sigmax;
@@ -275,10 +283,16 @@ classdef functionFit < handle
 
         % Funzione per fit non lineare
         function [par, errpar, yfit, chi2norm, dof, pValue, flag] = modelFit(this)
-
+            
             % Contolla validità parametri
             safetyCheck(this)
 
+            % Elimina oversampling dai dati
+            if(this.noOversampling)
+                [this.datax, this.datay, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmay);
+            end           
+            this.sigmay
+            
             % Definizione funzione scarti a partire dal modello
             scarti = @(par, xd, yd, ed) (this.model(par, xd) - yd) ./ ed;
 

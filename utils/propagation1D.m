@@ -22,19 +22,17 @@ function sigma = propagation1D(model, data, sdata)
             d = d_sum/(ii-1);
         else
             d = data(ii+1) - data(ii);
+            if d == 0
+                if d_sum == 0
+                    d = 1e-15;
+                else
+                    d = d_sum/ii;
+                end
+            end
             d_sum = d_sum + d;
         end       
         
         slope = d_model(data(ii), d);
         sigma(ii) = abs(slope.*sdata(ii));        
-    end    
-
-    % Metodo differenziale fisso ------------------------------------------
-    % d = (max(data) - min(data)) / 1e10;
-    % d_model = @(x, dx) (model(x + dx) - model(x))/dx; 
-    % slope = d_model(data, d);
-    % sigma = slope.*sdata;
-
-    
-
+    end
 end

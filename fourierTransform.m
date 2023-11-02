@@ -16,6 +16,7 @@ classdef fourierTransform < handle
         
         data (:,1) double {mustBeReal, mustBeFinite} 
         sigmaData (:,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} 
+        times (:,1) double {mustBeReal, mustBeFinite} 
         dt (1,1) double {mustBeReal, mustBeFinite} % Intervallo di campionamento
         tollerance (1,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} % Tolleranza sulle ampiezze per evitare errori numerici. Porre a inf per disattivare.
         verbose (1, :) logical
@@ -60,6 +61,7 @@ classdef fourierTransform < handle
             this.data = []; 
             this.sigmaData = [];
             this.frequencies = [];
+            this.times = [];
             this.dt = 1; 
             this.dF = 0;
             this.sigmaAmps = [];
@@ -127,12 +129,25 @@ classdef fourierTransform < handle
             end
 
             % Calcolo incertezze tramite propagazione della serie di Fourier                                                
-            FFT_var = fftshift(fft(this.sigmaData.^2))/length(this.sigmaData);
+            % Vettore ausiliario incertezze sulle frequenze
+            sigmaTimes = ones(size(this.times)) * this.dt/sqrt(12);
+
+            %FFT_var_tmp = fftshift(fft(this.sigmaData.^2))/length(this.sigmaData);
+            first_integral = this.dt * cumtrapz(this.sigmaData.^2.*sigmaTimes.^2);
+            second_integral = this.dt * cumtrapz(this.times.^2.*this.sigmaData.^2);
+            third_integral = this.dt * cumtrapz(this.data.^2.*sigmaTimes.^2);   
+            forth_integral = this.dt * cumtrapz(this.sigmaData.^2); 
+            correzione_primo_ordine = (this.frequencies/sqrt(2*pi))*(first_integral(end) + second_integral(end) + third_integral(end));
+            correzione_primo_ordine = 0;
+            FFT_var = forth_integral + correzione_primo_ordine;
+            
+            %FFT_var = fftshift(fft(this.sigmaData.^2))/length(this.sigmaData);
             FFT_sigma_real = sqrt(abs(real(FFT_var)));
             FFT_sigma_imag = sqrt(abs(imag(FFT_var)));
             FFT_real = real(fft_data);
             FFT_imag = imag(fft_data);       
             
+
             % Incertezza ampiezza e fase trasformata
             this.sigmaAmps = 1./(sqrt(FFT_real.^2 + FFT_imag.^2)) .* sqrt((FFT_real.*FFT_sigma_real).^2 + (FFT_imag.*FFT_sigma_imag).^2); 
             this.sigmaPhases = 1./(1+custom_division(FFT_imag,FFT_real).^2).*sqrt((1./FFT_real .* FFT_sigma_imag).^2 + (FFT_imag./FFT_real.^2 .* FFT_sigma_real).^2)*180/pi;

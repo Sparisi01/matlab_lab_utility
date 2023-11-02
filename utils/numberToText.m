@@ -5,21 +5,23 @@
 % cifre di sx.
 % -------------------------------------------------
 
-function text = numberToText(x, sx)
-    arguments
-        x (1,1) double {mustBeFinite, mustBeReal}
-        sx (1,1) double {mustBeFinite, mustBeReal}
-    end
-
-    % x Ã¨ un numero
-    % sx Ã¨ la sua incertezza
+function text = numberToText(x, sx, cifre)
+    % x è un numero
+    % sx è la sua incertezza
+    % cifre (opzionale) è il numero di cifre significative 
 
     og = floor(log10(abs(x))); % ordine di grandezza
     % mantissa_x = round(x / (10^og) * 10^cifre) / (10^cifre);
 
     ogs = floor(log10(abs(sx)));
     sx = round(sx / (10^ogs)) * (10^ogs);
-    cifre = strlength(string(sx / (10^og)))-2;
+
+    if (~exist('cifre', 'var')) || cifre <= 0
+        % correttamente uso la versione arrotondata di sx
+        cifre = max(1, 1 + og - floor(log10(abs(sx))));
+    end
+
+    cifre = cifre - 1;
 
     mantissa_x = sprintf("%0." + cifre +  "f", x / (10^og));
     mantissa_sx = sx / (10^og) + "";
