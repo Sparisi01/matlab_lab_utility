@@ -91,7 +91,7 @@ classdef functionFit < handle
             this.lowerBounds = []; % LowerBound parametri
             this.units = []; % Units for parameters in legend box
             this.parnames = []; % Parameters name in legend box
-            this.noOversampling = 1; 
+            this.noOversampling = 0;  % Merge data on the same x
 
             % Risultati fit  ----------------
             this.yfit = []; % Y calcolati post regressione con parametri ottimizzati
@@ -291,7 +291,6 @@ classdef functionFit < handle
             if(this.noOversampling)
                 [this.datax, this.datay, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmay);
             end           
-            this.sigmay
             
             % Definizione funzione scarti a partire dal modello
             scarti = @(par, xd, yd, ed) (this.model(par, xd) - yd) ./ ed;
