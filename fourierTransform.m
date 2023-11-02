@@ -8,15 +8,11 @@
 % - ./functionFit.m
 % ---------------------------------------------------
 
-% TODO
-% Formalizzare propagazione incerteze
-
 classdef fourierTransform < handle
     properties
         
         data (:,1) double {mustBeReal, mustBeFinite} 
         sigmaData (:,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} 
-        times (:,1) double {mustBeReal, mustBeFinite} 
         dt (1,1) double {mustBeReal, mustBeFinite} % Intervallo di campionamento
         tollerance (1,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} % Tolleranza sulle ampiezze per evitare errori numerici. Porre a inf per disattivare.
         verbose (1, :) logical
@@ -61,7 +57,6 @@ classdef fourierTransform < handle
             this.data = []; 
             this.sigmaData = [];
             this.frequencies = [];
-            this.times = [];
             this.dt = 1; 
             this.dF = 0;
             this.sigmaAmps = [];
@@ -129,17 +124,14 @@ classdef fourierTransform < handle
             end
 
             % Calcolo incertezze tramite propagazione della serie di Fourier                                                
-            % Vettore ausiliario incertezze sulle frequenze
-            sigmaTimes = ones(size(this.times)) * this.dt/sqrt(12);
+            
+            % Considero solo le sigma associate a x positivo e applico il cambio variabile x -> x/2;
+            tmp_sigmaData = zeros(size(this.sigmaData));
+            for ii = 1:(length(this.sigmaData)/2)
+                tmp_sigmaData(ii) =  linearSampling(1:length(this.sigmaData),this.sigmaData,ii/2 + (length(this.sigmaData)/2));
+            end
 
-            %FFT_var_tmp = fftshift(fft(this.sigmaData.^2))/length(this.sigmaData);
-            first_integral = this.dt * cumtrapz(this.sigmaData.^2.*sigmaTimes.^2);
-            second_integral = this.dt * cumtrapz(this.times.^2.*this.sigmaData.^2);
-            third_integral = this.dt * cumtrapz(this.data.^2.*sigmaTimes.^2);   
-            forth_integral = this.dt * cumtrapz(this.sigmaData.^2); 
-            correzione_primo_ordine = (this.frequencies/sqrt(2*pi))*(first_integral(end) + second_integral(end) + third_integral(end));
-            correzione_primo_ordine = 0;
-            FFT_var = forth_integral + correzione_primo_ordine;
+            FFT_var = 0.5 * fftshift(fft(tmp_sigmaData.^2))/length(tmp_sigmaData);
             
             %FFT_var = fftshift(fft(this.sigmaData.^2))/length(this.sigmaData);
             FFT_sigma_real = sqrt(abs(real(FFT_var)));
@@ -147,7 +139,6 @@ classdef fourierTransform < handle
             FFT_real = real(fft_data);
             FFT_imag = imag(fft_data);       
             
-
             % Incertezza ampiezza e fase trasformata
             this.sigmaAmps = 1./(sqrt(FFT_real.^2 + FFT_imag.^2)) .* sqrt((FFT_real.*FFT_sigma_real).^2 + (FFT_imag.*FFT_sigma_imag).^2); 
             this.sigmaPhases = 1./(1+custom_division(FFT_imag,FFT_real).^2).*sqrt((1./FFT_real .* FFT_sigma_imag).^2 + (FFT_imag./FFT_real.^2 .* FFT_sigma_real).^2)*180/pi;
@@ -177,7 +168,7 @@ classdef fourierTransform < handle
             
             [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
 
-            [fig, ax] = plotTransform(this, amps,1);
+            [fig, ax] = plotTransform(this, amps, sigmaAmps,1);
                         
             % Rendi visibile figura
             if showFig
@@ -200,7 +191,7 @@ classdef fourierTransform < handle
             end
                         
             [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
-            [fig, ax] = plotTransform(this, phases, 0);
+            [fig, ax] = plotTransform(this, phases, sigmaPhases, 0);
             
             % Rendi visibile figura
             if showFig
@@ -272,10 +263,11 @@ classdef fourierTransform < handle
     end
 
     methods (Hidden)
-        function [fig, ax] = plotTransform(this, yData, isAbsPlot)
+        function [fig, ax] = plotTransform(this, yData, sigmaY, isAbsPlot)
             arguments
                 this,               
-                yData (:,1) double {mustBeReal, mustBeFinite},                
+                yData (:,1) double {mustBeReal, mustBeFinite}, 
+                sigmaY (:,1) double {mustBeReal, mustBeFinite}, 
                 isAbsPlot (1,1) logical = 1,
             end
                                                
@@ -298,7 +290,9 @@ classdef fourierTransform < handle
             xlabel(this.xLabel);
             
             % Plotta dati
-            stem(xAxisData,yData,"filled", "Color", this.color);
+            %stem(xAxisData,yData,"filled", "Color", this.color);
+
+            errorbar(xAxisData,yData,sigmaY,"Color",this.color,"Marker",".","LineStyle", "none");
             
             % Imposta limiti
             if this.xAxisLim == zeros(1,2) 
