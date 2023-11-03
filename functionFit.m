@@ -127,7 +127,7 @@ classdef functionFit < handle
             this.reslabely = "Scarti"; % Label Asse y scarti
             this.logX = 0; % Asse X logaritmico (anche per scarti garantendo allineamento)
             this.logY = 0; % Asse Y logaritmico
-            this.boxPosition = [0.14 0.90]; % [x, y] la dimensione di aggiusta in automatico
+            this.boxPosition = [0.14 0.89]; % [x, y] la dimensione di aggiusta in automatico
             this.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
             this.showZoom = false; % Mostra grafico con zoom su un punto e barre incertezza
             this.zoomPosition = [0.21, 0.75, 0.15, 0.15]; % [x, y, w, h]

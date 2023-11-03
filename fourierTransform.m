@@ -241,6 +241,7 @@ classdef fourierTransform < handle
             probability_density_freq = tmp_amps/sum(tmp_amps);
             s_probability_density_freq = (sum(tmp_amps) - tmp_amps)/(sum(tmp_amps)^2).*tmp_s_amps;
             peak_mean = sum(tmp_freq .* probability_density_freq);
+            % Incertezza sulla densità di probabilità + incertezza di risuluzione in frequenza 
             peak_sigma = sqrt(sum(s_probability_density_freq.^2) + this.dF^2/12); 
             
             this.peak_mean = peak_mean;
