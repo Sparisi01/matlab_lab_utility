@@ -313,7 +313,7 @@ classdef functionFit < handle
             if this.verbose
                 options = optimoptions('lsqnonlin');
             else
-                 options = optimoptions('lsqnonlin', 'Display', 'none');
+                options = optimoptions('lsqnonlin', 'Display', 'none');
             end
             
             % Fit non lineare Libreria Matlab

@@ -131,8 +131,11 @@ classdef fourierTransform < handle
                 tmp_sigmaData(ii) =  linearSampling(1:length(this.sigmaData),this.sigmaData,ii/2 + (length(this.sigmaData)/2));
             end
 
-            FFT_var = 0.5 * fftshift(fft(tmp_sigmaData.^2))/length(tmp_sigmaData);
+            FFT_var_prime = 0.5 * fftshift(fft(tmp_sigmaData.^2))/length(tmp_sigmaData);
+            dF_prime = this.dF*2;
             
+            FFT_var = linearSampling((-Fs:dF_prime:Fs-dF_prime)', FFT_var_prime, this.frequencies);
+
             %FFT_var = fftshift(fft(this.sigmaData.^2))/length(this.sigmaData);
             FFT_sigma_real = sqrt(abs(real(FFT_var)));
             FFT_sigma_imag = sqrt(abs(imag(FFT_var)));
