@@ -7,11 +7,12 @@
 % - ./utils/exportFigure.m
 % - ./utils/propagation1D.m
 % - ./utils/avoidOversampling.m
-% - ./utils/tight_subplot.m
 % ---------------------------------------------------
 
+% TODO
+% Finire implementazione showDataArray
 
-classdef functionFit < handle
+classdef functionFit_dep < handle
 
     properties
         datax (:, 1) double {mustBeReal, mustBeFinite}
@@ -34,6 +35,7 @@ classdef functionFit < handle
         dof (1, 1) double {mustBeNonnegative}
         pValue (1, 1) double {mustBeNonnegative}
         showParArray (:, 1) logical
+        showDataArray (:, 1) logical
         showChi (1, 1) logical
         showChiNorm (1, 1) logical
         showPValue (1, 1) logical
@@ -63,9 +65,6 @@ classdef functionFit < handle
         fontSize (1, 1) double {mustBeReal, mustBeFinite}
         figureWidth (1, 1) double {mustBeReal, mustBeFinite}
         figureHeight (1, 1) double {mustBeReal, mustBeFinite}
-        hMargins (1, 2) double {mustBeReal, mustBeFinite}
-        wMargins (1, 2) double {mustBeReal, mustBeFinite}
-        padding (1, 1) double {mustBeReal, mustBeFinite}
         verbose (1, :) logical
         %nDifferentialSteps (1, 1) double
     end
@@ -73,7 +72,7 @@ classdef functionFit < handle
     methods
 
         % Valori di default per le opzioni
-        function this = functionFit()
+        function this = functionFit_dep()
             % Dati --------------------------
             this.datax = [];
             this.datay = [];
@@ -104,6 +103,7 @@ classdef functionFit < handle
             
             % Estetica ----------------------
             this.showParArray = [1 1]; % Scegli quali parametri mostrate con un array di bool della stessa dimensione di par
+            this.showDataArray = []; % Scegli quali dati mostrate con un array di bool della stessa dimensione dei dati. I dati non mostrati in grafico contribuiscono comunque al fit
             this.showChi = 1; % Mostra o no chi quadro in legenda
             this.showChiNorm = 0; % Mostra chi2normalizzato
             this.showPValue = 0; % Mostra PValue
@@ -127,17 +127,14 @@ classdef functionFit < handle
             this.reslabely = "Scarti"; % Label Asse y scarti
             this.logX = 0; % Asse X logaritmico (anche per scarti garantendo allineamento)
             this.logY = 0; % Asse Y logaritmico
-            this.boxPosition = [0.11 0.89]; % [x, y] la dimensione di aggiusta in automatico
+            this.boxPosition = [0.14 0.89]; % [x, y] la dimensione di aggiusta in automatico
             this.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
             this.showZoom = false; % Mostra grafico con zoom su un punto e barre incertezza
-            this.zoomPosition = [0.70 0.70, 0.15, 0.15]; % [x, y, w, h]
+            this.zoomPosition = [0.21, 0.75, 0.15, 0.15]; % [x, y, w, h]
             this.showGrid = 1; % Mostra griglia minor sui grafici
             this.fontSize = 14; % Dimensione font sia nelle label che nella box
             this.figureWidth = 8; % Larghezza immagine salvata in pollici
-            this.figureHeight = 6; % Altezza immagine salvata in pollici    
-            this.hMargins = [0.1 0.1];
-            this.wMargins = [0.1 0.1];
-            this.padding = 0.02;
+            this.figureHeight = 6; % Altezza immagine salvata in pollici            
         end
 
         % Genera immagine plot usando il modello dato
@@ -148,24 +145,30 @@ classdef functionFit < handle
                 showFig (1,1) logical = 1
             end
             
+            % Salva parametri precedenti al fit
             this.previousPar = this.par;
 
+            % Esegui fit lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
             [par, errpar, yfit, chi2norm, dof, pValue] = modelFit(this);
                        
+            % Genera Figura
             [fig, ax] = generatePlotFig(this, false);
             this.fig = fig;
             this.axes = ax;
 
+            % Rendi visibile figura
             if showFig
                 set(fig, 'visible', 'on'); 
             end
 
+            % Esporta figura in formato png
             if (strlength(file_name) > 0)
                 exportFigure(fig, ax, file_name, this.fontSize, this.figureWidth, this.figureHeight);
             end
 
         end
 
+        % Genera immagine plot usando il modello lineare
         function [par, errpar, yfit, chi2norm, dof, pValue, fig, ax] = plotLinearFit(this, file_name, showFig)
             arguments
                 this
@@ -173,28 +176,36 @@ classdef functionFit < handle
                 showFig (1,1) logical = 1
             end
             
+            % Salva parametri precedenti al fit
             this.previousPar = this.par;
 
+            % Esegui fit non lineare e salva negli attributi dell'oggetto i nuovi valori dei parametri
             [par, errpar, yfit, chi2norm, dof, pValue] = linearFit(this);
                                    
+            % Genera Figura
             [fig, ax] = generatePlotFig(this, true);
             this.fig = fig;
             this.axes = ax;
             
+            % Rendi visibile figura
             if showFig
                 set(fig, 'visible', 'on'); 
             end
             
+            % Esporta figura in formato png
             if (strlength(file_name) > 0)
                 exportFigure(fig, ax, file_name, this.fontSize, this.figureWidth, this.figureHeight);
             end
 
         end
 
+        % Funzione per fit lineare
         function [par, errpar, yfit, chi2norm, dof, pValue] = linearFit(this)
 
-            safetyCheck(this);
+            % Contolla validità parametri
+            safetyCheck(this)
 
+            % Elimina oversampling dai dati
             if(this.noOversampling)
                 [this.datax, this.datay, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmay);
             end
@@ -270,17 +281,23 @@ classdef functionFit < handle
 
         end
 
+        % Funzione per fit non lineare
         function [par, errpar, yfit, chi2norm, dof, pValue, flag] = modelFit(this)
             
             % Contolla validità parametri
             safetyCheck(this)
 
+            % Elimina oversampling dai dati
             if(this.noOversampling)
                 [this.datax, this.datay, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmay);
             end           
             
+            % Definizione funzione scarti a partire dal modello
             scarti = @(par, xd, yd, ed) (this.model(par, xd) - yd) ./ ed;
 
+            % Aggiusta dimensioni upper e lower bound. Se non impostate
+            % vengono inizializzati a due vettori delle dimensione di par a
+            % valori + e - inf
             if (isempty(this.upperBounds))
                 tmp_ub = ones(size(this.par)) * inf;
             else
@@ -299,24 +316,35 @@ classdef functionFit < handle
                 options = optimoptions('lsqnonlin', 'Display', 'none');
             end
             
+            % Fit non lineare Libreria Matlab
             [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, this.par, tmp_lb, tmp_ub, options, this.datax, this.datay, this.sigmay);
                       
-            dof = (length(this.datax) - length(par));  
+            % Gradi di liberta
+            dof = (length(this.datax) - length(par));
+            
+            % Yfit ottimizzati
             yfit = this.model(par, this.datax);
             
+            % Propaga incertezze x lungo y
             sigma_propagata = propagation1D(@(x) this.model(par, x), this.datax, this.sigmax);
             sigmaScarti = sqrt(this.sigmay .^2 + (sigma_propagata).^2); 
             
+            % Calcolo Chi quadro e pValue
             scarto_y = this.datay - yfit;            
             chi2norm = sum((scarto_y./sigmaScarti).^2)/dof;                      
             pValue = 1 - chi2cdf(resnorm, dof);    
 
+            % Matrice di covariaza
             covar = inv(jacobian' * jacobian);
+
+            % Calcolo errori parametri
             var = diag(covar);
             sigma = sqrt(var);
-            sigmaf = full(sigma);           
+            sigmaf = full(sigma);
+            
             errpar = sigmaf * sqrt(chi2norm);           
                         
+            % Assegna variabili oggetto
             this.par = par;
             this.errpar = errpar;
             this.chi2norm = chi2norm;
@@ -348,7 +376,7 @@ classdef functionFit < handle
                 this.sigmax = zeros(size(this.datay));
                 warning("Incertezze su datax non assegnate. Inizializzate a 0")           
             else
-                if length(this.sigmax) == 1
+                if size(this.sigmax) == [1,1]
                     this.sigmax = ones(size(this.datax)) * this.sigmax;
                 end                
             end
@@ -358,75 +386,117 @@ classdef functionFit < handle
                 this.sigmay = ones(size(this.datay));
                 warning("Incertezze su datay non assegnate. Inizializzate a un vettore unitario.")        
             else
-                if length(this.sigmay) == 1
+                if size(this.sigmay) == [1,1]
                     this.sigmay = ones(size(this.datay)) * this.sigmay;
                 end 
             end
         end
 
-        function [fig,ax] = generatePlotFig(this, isLinearFit)
+        function [fig, ax] = generatePlotFig(this, isLinearFit)
 
             fig = figure('units','inch','position',[0,0,this.figureWidth,this.figureHeight],'visible','off');
             
-            h = 1 + this.showScarti;
-            [ax, P] = tight_subplot(h,1,[this.padding 0],this.hMargins,this.wMargins);
-
+            % Costrusci tiled layout
             if this.showScarti
-                set(ax(1),'Position',P{1}.*[1,0.78,1,1.3]);
-                set(ax(2),'Position',P{2}.*[1,1,1,0.7]);
-            end                   
-                      
-            set(ax(1),'box','on');
-            hold(ax(1),'on');
+                h = 3;
+                tiledlayout(h, 1);               
+                ax(1) = nexttile(1, [h - 1, 1]);
+            else
+                ax(1) = axes();
+            end
             
-            scatter(ax(1),this.datax, this.datay, "MarkerEdgeColor", this.dataColor);
-                                       
+            % Determina se i dati vanno filtrati
+            toFilter = 1;
+            if (isempty(this.showDataArray))
+                this.showDataArray = ones(size(this.datax));
+                toFilter = 0;
+            else
+                if size(this.showDataArray) ~= size(this.datax)
+                    error('u:stuffed:it', "showDataArray e datax, datay devono essere della stessa dimensione.");
+                end
+            end
+                    
+            % Filtra dati in base a showDataArray
+            if toFilter
+                jj = 1;
+                filtered_datax = ones(sum(this.showDataArray),1);
+                filtered_datay = ones(sum(this.showDataArray),1);
+
+                for ii = 1:length(this.showDataArray)
+                    if this.showDataArray(ii) == 1                        
+                        filtered_datax(jj) = this.datax(jj);
+                        filtered_datay(jj) = this.datay(jj);
+                        jj = jj + 1;
+                    end
+                end
+            else
+                filtered_datax = this.datax;
+                filtered_datay = this.datay;          
+            end            
+                        
+            hold on
+            box on
+
+            % Plot dei dati
+            scatter(filtered_datax, filtered_datay, "MarkerEdgeColor", this.dataColor);
+                        
+            % Disegna la funzione con parametri ottimizzati e parametri iniziali     
             if isLinearFit
                 if this.showModel
-                    fplot(ax(1),@(x) this.par(1) + x * this.par(2), 'Color', this.modelColor, 'LineStyle', this.modelLineStyle, "LineWidth",this.lineWidth);
+                    fplot(@(x) this.par(1) + x * this.par(2), 'Color', this.modelColor, 'LineStyle', this.modelLineStyle, "LineWidth",this.lineWidth);
                 end
                 if this.showInitialParModel
-                    
-                    fplot(ax(1),@(x) this.previousPar(1) + x * this.previousPar(2), 'Color', 'k', 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
+                    hold on;
+                    fplot(@(x) this.previousPar(1) + x * this.previousPar(2), 'Color', 'k', 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
                 end             
             else
                 if this.showModel
-                    fplot(ax(1),@(x) this.model(this.par, x), 'Color', this.modelColor, 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
+                    fplot(@(x) this.model(this.par, x), 'Color', this.modelColor, 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
                 end
-                if this.showInitialParModel                   
-                    fplot(ax(1),@(x) this.model(this.previousPar, x), 'Color', 'k', 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
+                if this.showInitialParModel
+                    hold on;
+                    fplot(@(x) this.model(this.previousPar, x), 'Color', 'k', 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
                 end
             end
+
+            % Imposta dinamicamente i limiti ------------------------------
 
             delta_x = abs(max(this.datax) - min(this.datax));
             delta_y = abs(max(this.datay) - min(this.datay));
             
+            % Limiti asse X scarti
             if this.xlim(1) >= this.xlim(2)
                 % Gestione caso asse logaritmico per evitare il passaggio
                 % dei limiti attraverso lo 0
                 if this.logX
-                    xlim(ax(1),sort([min(this.datax) * 0.2 max(this.datax) * 1.2]));
+                    xlim(sort([min(this.datax) * 0.2 max(this.datax) * 1.2]));
                 else     
-                    xlim(ax(1),sort([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]));
+                    xlim(sort([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]));
                 end
             else
-                xlim(ax(1),[this.xlim(1) this.xlim(2)]);
+                xlim([this.xlim(1) this.xlim(2)]);
             end
 
             if this.ylim(1) >= this.ylim(2)  
                 % Gestione caso asse logaritmico per evitare il passaggio
                 % dei limiti attraverso lo 0
                 if this.logY
-                    ylim(ax(1),sort([min(this.datay) * 0.2 max(this.datay) * 1.2]));
+                    ylim(sort([min(this.datay) * 0.2 max(this.datay) * 1.2]));
                 else     
-                    ylim(ax(1),sort([min(this.datay) - 0.1 * delta_y max(this.datay) + 0.1 * delta_y]));
+                    ylim(sort([min(this.datay) - 0.1 * delta_y max(this.datay) + 0.1 * delta_y]));
                 end             
             else
-                ylim(ax(1),[this.ylim(1) this.ylim(2)]);
+                ylim([this.ylim(1) this.ylim(2)]);
             end
             
-            title(ax(1),this.name);
-            ylabel(ax(1),this.labely);
+            % Estetica assi -----------------------------------------------
+
+            title(this.name);
+            ylabel(this.labely);
+            
+            if this.showGrid
+                grid minor;
+            end 
 
             if this.logX
                 set(ax(1), 'XScale', 'log')
@@ -436,16 +506,14 @@ classdef functionFit < handle
                 set(ax(1), 'YScale', 'log')
             end
 
-            if this.showGrid
-                grid(ax(1),'minor');
-            end
-
             if ~this.showScarti
-                xlabel(ax(1),this.labelx);
+                xlabel(this.labelx);
             else
-                set(ax(1), 'XTickLabel', []);
+                set(gca, 'XTickLabel', []);
             end
-                        
+            
+            % Box parametri -----------------------------------------------
+            
             if this.showBox
                               
                 % Aggiusta array unita di misura.
@@ -529,11 +597,15 @@ classdef functionFit < handle
                 );
             end
 
-            if this.showScarti                
-                
-                set(ax(2),'box','on');
-                hold(ax(2),'on');
 
+            % Grafico scarti  ---------------------------------------------
+
+            if this.showScarti                
+                ax(2) = nexttile([1 1]);
+               
+                box on
+
+                % Propagazione incertezze sugli scarti
                 if isLinearFit
                     sigmaScarti = sqrt(this.sigmay .^ 2 + (this.par(2) * this.sigmax) .^ 2);
                 else
@@ -542,73 +614,98 @@ classdef functionFit < handle
                     sigmaScarti = sqrt(this.sigmay .^2 + (sigma_propagata).^2);    
                 end
                 
+                % Vettore scarti
                 scarto_y = this.datay - this.yfit;
-                               
-                if this.logX
-                    set(ax(2), 'XScale', 'log')
+
+                % Filtra scarti in base a showDataArray                           
+                if toFilter
+                    jj = 1;
+                    filtered_scarto_y = ones(sum(this.showDataArray),1);
+                    filtered_s_scarto_y = ones(sum(this.showDataArray),1);
+                    for ii = 1:length(this.showDataArray)
+                        if this.showDataArray(ii) == 1
+                            filtered_scarto_y(jj) = scarto_y(jj);
+                            filtered_s_scarto_y(jj) = sigmaScarti(jj);
+                            jj = jj + 1;
+                        end
+                    end
+                else
+                    filtered_scarto_y = scarto_y;
+                    filtered_s_scarto_y = sigmaScarti;
+                end
+                                
+                hold on;
+                                
+                if this.showGrid
+                    grid minor;
                 end
 
-                if this.showGrid
-                    grid(ax(2),'minor');
+                if this.logX
+                    set(ax(2), 'XScale', 'log')
                 end
 
                 % Linea orizzontale lungo y=0 negli scarti
                 % Gestione caso asse logaritmico per evitare il passaggio
                 % delle coordinate attraverso lasse 0
                 if this.logX                   
-                    x = sort([min(this.datax) * 0.2 max(this.datax) * 1.2]);
+                    x = [sort([min(this.datax) * 0.2 max(this.datax) * 1.2])];
                     y = [0 0];
                 else
                     x = [min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x];
                     y = [0 0];
                 end                
-                line(ax(2),x, y, 'Color', this.modelColor, 'LineStyle', '-',"LineWidth", this.lineWidth)
+                line(x, y, 'Color', this.modelColor, 'LineStyle', '-',"LineWidth", this.lineWidth)
                 
+                % Plot degli scarti
                 if this.continuosData
-                    plot(ax(2),this.datax, this.datay,"LineWidth",this.lineWidth,"Color",[this.dataColor 1]);
-                    plot(ax(2),this.datax, this.datay - sigmaScarti, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
-                    plot(ax(2),this.datax, this.datay + sigmaScarti, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
+                    plot(filtered_datax, filtered_scarto_y,"LineWidth",this.lineWidth,"Color",[this.dataColor 1]);
+                    plot(filtered_datax, filtered_scarto_y - filtered_s_scarto_y, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
+                    plot(filtered_datax, filtered_scarto_y + filtered_s_scarto_y, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
                 else
-                    e2 = errorbar(ax(2),this.datax, scarto_y, sigmaScarti);
+                    e2 = errorbar(filtered_datax, filtered_scarto_y, filtered_s_scarto_y);
                     e2.LineStyle = 'none';                  
-                    scatter(ax(2),this.datax, scarto_y, "MarkerEdgeColor", this.dataColor);
+                    scatter(this.datax.*this.showDataArray, scarto_y.*this.showDataArray, "MarkerEdgeColor", this.dataColor);
                 end
                
+                % Limiti asse X scarti
                 if this.xlim(1) >= this.xlim(2)
                     % Gestione caso asse logaritmico per evitare passaggio
                     % dei limiti attraverso lo 0
                     if this.logX
-                        xlim(ax(2),sort([min(this.datax) * 0.2 max(this.datax) * 1.2]));
+                        xlim(sort([min(this.datax) * 0.2 max(this.datax) * 1.2]));
                     else     
-                        xlim(ax(2),sort([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]));
+                        xlim(sort([min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x]));
                     end
                 else
-                    xlim(ax(2),[this.xlim(1) this.xlim(2)]);
+                    xlim([this.xlim(1) this.xlim(2)]);
                 end
                 
+                % Limiti asse Y scarti
                 if this.resylim(1) >= this.resylim(2)
                     tmp_limits = max([abs(max(scarto_y)) + 2*abs(max(sigmaScarti)) abs(min(scarto_y)) + 2*abs(max(sigmaScarti))]);
-                    ylim(ax(2),[-tmp_limits tmp_limits]); % Asse Y scarti simmetrico rispetto allo 0      
+                    ylim([-tmp_limits tmp_limits]); % Asse Y scarti simmetrico rispetto allo 0      
                 else
-                    ylim(ax(2),[this.resylim(1) this.resylim(2)])
+                    ylim([this.resylim(1) this.resylim(2)])
                 end
                 
-                ylabel(ax(2),this.reslabely);
-                xlabel(ax(2),this.labelx);                                              
+                % Label Scarti
+                ylabel(this.reslabely);
+                xlabel(this.labelx);                                              
             end
 
             % Grafico errore zoom  ----------------------------------------
 
             if (this.showZoom)
+                hold on;
                 id = round(length(this.datax) / 2);
                 x = this.datax(id);
                 y = this.datay(id);
                 ax(length(ax)+1) = axes("Position", this.zoomPosition);
-                errorbar(ax(length(ax)),x, y, -this.sigmay(id), this.sigmay(id), -this.sigmax(id), this.sigmax(id), 'o');
-                %xlim(ax(length(ax)), sort([(x - this.sigmax(id) * 1.5) (x + this.sigmax(id) * 1.5)]));
-                %ylim(ax(length(ax)), sort([(y - this.sigmay(id) * 1.5) (y + this.sigmay(id) * 1.5)]));
+                errorbar(x, y, -this.sigmay(id), this.sigmay(id), -this.sigmax(id), this.sigmax(id), 'o');
+                xlim(ax(length(ax)), [(x - this.sigmax(id) * 1.5) (x + this.sigmax(id) * 1.5)]);
+                ylim(ax(length(ax)), [(y - this.sigmay(id) * 1.5) (y + this.sigmay(id) * 1.5)]);
                 if this.showGrid
-                    grid(ax(length(ax)),'minor');
+                    grid on;
                 end
             end
 
