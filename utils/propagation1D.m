@@ -1,9 +1,9 @@
-% -------------------------------------------------
-% Funzione per propagare le incertezze su un modello
-% a singolo parametro. 
-% ---------------------------------------------------
-
 function sigma = propagation1D(model, data, sdata)
+    % -------------------------------------------------
+    % Funzione per propagare le incertezze su un modello
+    % a singolo parametro. 
+    % ---------------------------------------------------
+
     arguments
         model (1,1) function_handle
         data (:,1) double {mustBeReal, mustBeFinite}

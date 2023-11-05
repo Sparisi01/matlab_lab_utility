@@ -1,10 +1,10 @@
-% ---------------------------------------------------
-% Funzione per la risoluzione numerica di equazioni 
-% differenziali del secondo ordine nella forma:
-% y(x)'' * (k(x)^2)*y(x) - s(x) = 0
-% ---------------------------------------------------
-
 function [X,Y] = numerov(Y_0, V_0, limits, n_steps, k, s)
+    % ---------------------------------------------------
+    % Funzione per la risoluzione numerica di equazioni 
+    % differenziali del secondo ordine nella forma:
+    % y(x)'' * (k(x)^2)*y(x) - s(x) = 0
+    % ---------------------------------------------------
+
     arguments
         Y_0 (1,1) double
         V_0 (1,1) double

@@ -1,17 +1,15 @@
-% ---------------------------------------------------
-% Funzione per eseguire fit a un modello generico e
-% produrre grafici con numero di parametri variabile. 
-% ---------------------------------------------------
-% DIPENDENZE:
-% - ./utils/numberToText.m
-% - ./utils/exportFigure.m
-% - ./utils/propagation1D.m
-% - ./utils/avoidOversampling.m
-% - ./utils/tight_subplot.m
-% ---------------------------------------------------
-
-
 classdef functionFit < handle
+    % ---------------------------------------------------
+    % Funzione per eseguire fit a un modello generico e
+    % produrre grafici con numero di parametri variabile. 
+    % ---------------------------------------------------
+    % DIPENDENZE:
+    % - ./utils/numberToText.m
+    % - ./utils/exportFigure.m
+    % - ./utils/propagation1D.m
+    % - ./utils/avoidOversampling.m
+    % - ./utils/tight_subplot.m
+    % ---------------------------------------------------
 
     properties
         datax (:, 1) double {mustBeReal, mustBeFinite}

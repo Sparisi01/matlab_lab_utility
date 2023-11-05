@@ -1,14 +1,14 @@
-% -------------------------------------------------
-% Funzione per eseguire agilmente la trasformata
-% di fourier di un set di dati e generare il grafico
-% in ampiezza e fase.
-% ---------------------------------------------------
-% DIPENDENZE:
-% - ./utils/exportFigure.m
-% - ./functionFit.m
-% ---------------------------------------------------
-
 classdef fourierTransform < handle
+    % -------------------------------------------------
+    % Funzione per eseguire agilmente la trasformata
+    % di fourier di un set di dati e generare il grafico
+    % in ampiezza e fase.
+    % ---------------------------------------------------
+    % DIPENDENZE:
+    % - ./utils/exportFigure.m
+    % - ./functionFit.m
+    % ---------------------------------------------------
+
     properties
         
         data (:,1) double {mustBeReal, mustBeFinite} 
