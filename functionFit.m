@@ -67,7 +67,6 @@ classdef functionFit < handle
         wMargins (1, 2) double {mustBeReal, mustBeFinite}
         padding (1, 1) double {mustBeReal, mustBeFinite}
         verbose (1, :) logical
-        %nDifferentialSteps (1, 1) double
     end
 
     methods
@@ -136,7 +135,7 @@ classdef functionFit < handle
             this.figureWidth = 8; % Larghezza immagine salvata in pollici
             this.figureHeight = 6; % Altezza immagine salvata in pollici    
             this.hMargins = [0.1 0.1];
-            this.wMargins = [0.1 0.1];
+            this.wMargins = [0.15 0.15];
             this.padding = 0.02;
         end
 

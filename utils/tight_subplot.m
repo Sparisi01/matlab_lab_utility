@@ -55,9 +55,6 @@ for ih = 1:Nh
         ha(ii) = axes('Units','normalized', ...
             'Position',[px py axw axh], ...
             'Box','on','XGrid','on','YGrid','on');
-        if(ih ~= Nh)
-            set(ha(ii),'XTickLabel','')
-        end
         px = px+axw+gap(2);
     end
     py = py-axh-gap(1);

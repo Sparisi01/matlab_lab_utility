@@ -10,11 +10,9 @@ function sigma = propagation1D(model, data, sdata)
         sdata (:,1) double {mustBeReal, mustBeFinite, mustBeNonnegative}        
     end
 
-    % Metodo differenziale variabile --------------------------------------
     sigma = zeros(size(data));
     d_sum = 0;
 
-    % Differenziale modello
     d_model = @(x, dx) (model(x + dx) - model(x))/dx; 
 
     for ii = 1:length(data)
