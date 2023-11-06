@@ -129,7 +129,7 @@ classdef functionFit < handle
             this.fontSize = 14; % Dimensione font sia nelle label che nella box
             this.figureWidth = 8; % Larghezza immagine salvata in pollici
             this.figureHeight = 6; % Altezza immagine salvata in pollici    
-            this.hMargins = [0.1 0.1];
+            this.hMargins = [0.12 0.08];
             this.wMargins = [0.13 0.13]; 
             this.padding = 0.05; 
         end
