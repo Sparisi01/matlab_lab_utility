@@ -74,9 +74,6 @@ classdef functionFit < handle
             % Dati --------------------------
             this.datax = [];
             this.datay = [];
-            % Se le incertezze non vengono definite vengono inizializzate a
-            % 1% dei dati. Se viene passato uno scalare la stessa
-            % incertezza viene applicata a ogni punto.
             this.sigmax = [];
             this.sigmay = [];
 
@@ -133,8 +130,8 @@ classdef functionFit < handle
             this.figureWidth = 8; % Larghezza immagine salvata in pollici
             this.figureHeight = 6; % Altezza immagine salvata in pollici    
             this.hMargins = [0.1 0.1];
-            this.wMargins = [0.15 0.15];
-            this.padding = 0.02;
+            this.wMargins = [0.13 0.13]; 
+            this.padding = 0.05; 
         end
 
         % Genera immagine plot usando il modello dato
