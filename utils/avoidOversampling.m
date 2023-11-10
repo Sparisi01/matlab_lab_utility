@@ -1,4 +1,4 @@
-function [new_datax, new_datay, new_s_datay] = avoidOversampling(datax, datay, sigmay)
+function [new_datax, new_datay, new_s_datax, new_s_datay] = avoidOversampling(datax, datay, sigmax, sigmay)
 
     
     % safety check
@@ -7,10 +7,14 @@ function [new_datax, new_datay, new_s_datay] = avoidOversampling(datax, datay, s
     % vogliamo che i dati in X siano ordinati in modo crescente
     [datax, order] = sort(datax);
     datay = datay(order);
+    sigmax = sigmax(order);
+    sigmay = sigmay(order);
 
     new_datax = [];
     new_datay = [];
+    new_s_datax = [];
     new_s_datay = [];
+
     last_x = datax(1);
     start_cur_list = 1;
     end_cur_list = 1;
@@ -22,16 +26,19 @@ function [new_datax, new_datay, new_s_datay] = avoidOversampling(datax, datay, s
             if(start_cur_list == end_cur_list)
                 new_datax(length(new_datax) + 1, 1) = last_x;
                 new_datay(length(new_datay) + 1, 1) = datay(start_cur_list);
+                new_s_datax(length(new_s_datax) + 1, 1) = sigmax(start_cur_list);  
                 new_s_datay(length(new_s_datay) + 1, 1) = sigmay(start_cur_list);  
             else    
                 tmp_sigma = std(datay(start_cur_list:end_cur_list));
                 if(tmp_sigma == 0)
                     new_datax(length(new_datax) + 1:length(new_datax) + 1 + end_cur_list - start_cur_list, 1) = datax(start_cur_list:end_cur_list);
                     new_datay(length(new_datay) + 1:length(new_datay) + 1 + end_cur_list - start_cur_list, 1) = datay(start_cur_list:end_cur_list);
+                    new_s_datax(length(new_s_datax) + 1:length(new_s_datax) + 1 + end_cur_list - start_cur_list, 1) = sigmax(start_cur_list:end_cur_list);
                     new_s_datay(length(new_s_datay) + 1:length(new_s_datay) + 1 + end_cur_list - start_cur_list, 1) = sigmay(start_cur_list:end_cur_list);
                 else
                     new_datax(length(new_datax) + 1, 1) = last_x;
                     new_datay(length(new_datay) + 1, 1) = mean(datay(start_cur_list:end_cur_list));
+                    new_s_datax(length(new_s_datax) + 1, 1) = sigmax(ii); 
                     new_s_datay(length(new_s_datay) + 1, 1) = tmp_sigma;    
                 end
             end
@@ -45,10 +52,12 @@ function [new_datax, new_datay, new_s_datay] = avoidOversampling(datax, datay, s
         if(tmp_sigma == 0)
             new_datax(length(new_datax) + 1:length(new_datax) + 1 + end_cur_list - start_cur_list, 1) = datax(start_cur_list:end_cur_list);
             new_datay(length(new_datay) + 1:length(new_datay) + 1 + end_cur_list - start_cur_list, 1) = datay(start_cur_list:end_cur_list);
+            new_s_datax(length(new_s_datax) + 1:length(new_s_datax) + 1 + end_cur_list - start_cur_list, 1) = sigmax(start_cur_list:end_cur_list);
             new_s_datay(length(new_s_datay) + 1:length(new_s_datay) + 1 + end_cur_list - start_cur_list, 1) = sigmay(start_cur_list:end_cur_list);
         else
             new_datax(length(new_datax) + 1, 1) = last_x;
             new_datay(length(new_datay) + 1, 1) = mean(datay(start_cur_list:end_cur_list));
+            new_s_datax(length(new_s_datax) + 1, 1) = sigmax(length(new_s_datax) + 1,1);    
             new_s_datay(length(new_s_datay) + 1, 1) = tmp_sigma;    
         end
     end

@@ -46,7 +46,8 @@ classdef fourierTransform < handle
         mirrored (1,1) logical % Visualizza grafico specchiato       
         fontSize (1, 1) double {mustBeReal, mustBeFinite} % Dimensione font 
         figureWidth (1, 1) double {mustBeReal, mustBeFinite} % Larghezza immagine salvata in pollici
-        figureHeight (1, 1) double {mustBeReal, mustBeFinite} % Altezza immagine salvata in pollici      
+        figureHeight (1, 1) double {mustBeReal, mustBeFinite} % Altezza immagine salvata in pollici     
+        stemPlot (1,1) logical  
     end
 
     methods
@@ -55,7 +56,7 @@ classdef fourierTransform < handle
         
         function this = fourierTransform()
             this.data = []; 
-            this.sigmaData = [];
+            this.sigmaData = 0;
             this.frequencies = [];
             this.dt = 1; 
             this.dF = 0;
@@ -82,6 +83,7 @@ classdef fourierTransform < handle
             this.figureWidth = 8; 
             this.figureHeight = 6; 
             this.verbose = 1;
+            this.stemPlot = 1;
         end
 
         % -----------------------------------------------------------------
@@ -246,7 +248,7 @@ classdef fourierTransform < handle
             peak_mean = sum(tmp_freq .* probability_density_freq);
             % Incertezza sulla densità di probabilità + incertezza di risuluzione in frequenza 
             peak_sigma = sqrt(sum(s_probability_density_freq.^2) + this.dF^2/12); 
-            
+
             this.peak_mean = peak_mean;
             this.peak_sigma = peak_sigma;
 
@@ -255,7 +257,7 @@ classdef fourierTransform < handle
             peak_amp_sigma = this.sigmaAmps(index_centro);
             
             % Stima fase con nearest point
-            peak_phase = tmp_phases(intervallo);
+            peak_phase = tmp_phases(intervallo+1);
             peak_phase_sigma = this.sigmaPhases(index_centro);
             
             this.peak_amp = peak_amp;
@@ -293,10 +295,14 @@ classdef fourierTransform < handle
             end
             xlabel(this.xLabel);
             
-            % Plotta dati
-            %stem(xAxisData,yData,"filled", "Color", this.color);
-
-            errorbar(xAxisData,yData,sigmaY,"Color",this.color,"Marker",".","LineStyle", "none");
+            
+            if this.stemPlot
+                stem(xAxisData,yData,"filled", "Color", this.color);
+            
+            else
+                errorbar(xAxisData,yData,sigmaY,"Color",this.color,"Marker",".","LineStyle", "none");
+            end
+            
             
             % Imposta limiti
             if this.xAxisLim == zeros(1,2) 

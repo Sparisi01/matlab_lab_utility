@@ -121,7 +121,7 @@ classdef functionFit < handle
             this.reslabely = "Scarti"; % Label Asse y scarti
             this.logX = 0; % Asse X logaritmico (anche per scarti garantendo allineamento)
             this.logY = 0; % Asse Y logaritmico
-            this.boxPosition = [0.11 0.89]; % [x, y] la dimensione di aggiusta in automatico
+            this.boxPosition = [0.145 0.885]; % [x, y] la dimensione di aggiusta in automatico
             this.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
             this.showZoom = false; % Mostra grafico con zoom su un punto e barre incertezza
             this.zoomPosition = [0.70 0.70, 0.15, 0.15]; % [x, y, w, h]
@@ -190,7 +190,7 @@ classdef functionFit < handle
             safetyCheck(this);
 
             if(this.noOversampling)
-                [this.datax, this.datay, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmay);
+                [this.datax, this.datay, this.sigmax, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmax, this.sigmay);
             end
 
             data_x = this.datax;
@@ -270,7 +270,7 @@ classdef functionFit < handle
             safetyCheck(this)
 
             if(this.noOversampling)
-                [this.datax, this.datay, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmay);
+                [this.datax, this.datay, this.sigmax, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmax, this.sigmay);
             end           
             
             scarti = @(par, xd, yd, ed) (this.model(par, xd) - yd) ./ ed;
