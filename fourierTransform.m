@@ -223,6 +223,7 @@ classdef fourierTransform < handle
             
             % Fissa valori di default se non impostati
             index_zero = round(length(this.amps)/2 + 1);
+            
             if this.peak_detection_centro_index == inf 
                 [~,I] = max(this.amps(index_zero:end));
                 index_centro = index_zero + I;

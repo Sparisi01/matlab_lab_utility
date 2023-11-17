@@ -25,7 +25,7 @@ classdef functionFit < handle
         units (:, 1) string
         parnames (:, 1) string
         noOversampling (1,1) logical
-        yfit (:, 1) double {mustBeReal, mustBeFinite}
+        yfit (:, 1) double {mustBeFinite}
         chi2norm (1, 1) double {mustBeNonnegative}
         fig (1, 1)
         axes (:, 1)
@@ -301,7 +301,7 @@ classdef functionFit < handle
             sigma_propagata = propagation1D(@(x) this.model(par, x), this.datax, this.sigmax);
             sigmaScarti = sqrt(this.sigmay .^2 + (sigma_propagata).^2); 
             
-            scarto_y = this.datay - yfit;            
+            scarto_y = abs(this.datay - yfit);            
             chi2norm = sum((scarto_y./sigmaScarti).^2)/dof;                      
             pValue = 1 - chi2cdf(resnorm, dof);    
 
