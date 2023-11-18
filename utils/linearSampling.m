@@ -27,6 +27,7 @@ function ysamples = linearSampling(datax, datay, xsamples, varargin)
 
     % LINEAR INTERPOLATION (lerp)
     ysamples = [];
+   
     for x = xsamples
         id_before = 1;
         id_after = 1;
@@ -52,6 +53,10 @@ function ysamples = linearSampling(datax, datay, xsamples, varargin)
         elseif x <= min(datax)
             y = min(datax);
         else
+            if(id_before == 0)
+                id_before = id_before + 1;
+                id_after = id_after + 1;
+            end
             y = datay(id_before) + (datay(id_after) - datay(id_before))*(x - datax(id_before))/(datax(id_after) - datax(id_before));
         end
         ysamples = [ysamples, y];

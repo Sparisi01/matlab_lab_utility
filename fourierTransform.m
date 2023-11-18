@@ -221,37 +221,47 @@ classdef fourierTransform < handle
             index_centro = this.peak_detection_centro_index;
             intervallo = this.peak_detection_interval_index;
             
-            % Fissa valori di default se non impostati
-            index_zero = round(length(this.amps)/2 + 1);
-            
+            % Trova l'indice corrispondente a frequenza zero
+            [~,index_zero] = min(abs(this.frequencies));
+                      
+            ampiezza_meta_altezza = 0;
+
             if this.peak_detection_centro_index == inf 
-                [~,I] = max(this.amps(index_zero:end));
-                index_centro = index_zero + I;
+                 [MAX,I] = max(this.amps(index_zero:end));
+                 index_centro = index_zero + I;
+                 ampiezza_meta_altezza = MAX/2;
             end
 
             if this.peak_detection_interval_index == inf    
-                intervallo = 10;                      
+                intervallo = 5;                      
             end
             
             % Definizione intervallo attorno al centro
             intervallo_up = index_centro + intervallo;
             intervallo_do = index_centro - intervallo;     
                            
+            
             % Seleziona solo dati nell'intorno del picco selezionato 
             tmp_freq = this.frequencies(intervallo_do:intervallo_up);
             tmp_amps = this.amps(intervallo_do:intervallo_up);
             tmp_s_amps = this.sigmaAmps(intervallo_do:intervallo_up);
             tmp_phases = this.phases(intervallo_do:intervallo_up);
-            
-            % Calcolo media e dmedia per il picco       
-            probability_density_freq = tmp_amps/sum(tmp_amps);
-            s_probability_density_freq = (sum(tmp_amps) - tmp_amps)/(sum(tmp_amps)^2).*tmp_s_amps;
-            peak_mean = sum(tmp_freq .* probability_density_freq);
-            % Incertezza sulla densità di probabilità + incertezza di risuluzione in frequenza 
-            peak_sigma = sqrt(sum(s_probability_density_freq.^2) + this.dF^2/12); 
+             
+            % % Calcolo media e dmedia per il picco       
+            % probability_density_freq = tmp_amps/sum(tmp_amps);
+            % s_probability_density_freq = (sum(tmp_amps) - tmp_amps)/(sum(tmp_amps)^2).*tmp_s_amps;
+            % peak_mean = sum(tmp_freq .* probability_density_freq);
+            % % Incertezza sulla densità di probabilità + incertezza di risuluzione in frequenza 
+            % peak_sigma = sqrt(sum(s_probability_density_freq.^2) + this.dF^2/12); 
 
-            this.peak_mean = peak_mean;
-            this.peak_sigma = peak_sigma;
+            x_meta_altezza_up = linearSampling(this.amps(index_centro-1:index_centro+intervallo),this.frequencies(index_centro-1:index_centro+intervallo),ampiezza_meta_altezza);
+            x_meta_altezza_down = linearSampling(this.amps(index_centro-intervallo:index_centro-1),this.frequencies(index_centro-intervallo:index_centro-1),ampiezza_meta_altezza);
+            
+            this.peak_mean = (x_meta_altezza_up + x_meta_altezza_down)/2;
+            this.peak_sigma = this.dF/sqrt(12);
+
+            peak_mean = this.peak_mean;
+            peak_sigma = this.peak_sigma;
 
             % Interpolazione lineare ampiezza picco
             peak_amp = linearSampling(tmp_freq,tmp_amps,peak_mean);
