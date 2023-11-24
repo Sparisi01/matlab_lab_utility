@@ -258,7 +258,7 @@ classdef fourierTransform < handle
             x_meta_altezza_down = linearSampling(this.amps(index_centro-intervallo:index_centro-1),this.frequencies(index_centro-intervallo:index_centro-1),ampiezza_meta_altezza);
             
             this.peak_mean = (x_meta_altezza_up + x_meta_altezza_down)/2;
-            this.peak_sigma = this.dF/sqrt(12);
+            this.peak_sigma = this.dF/sqrt(12) * sqrt(2);
 
             peak_mean = this.peak_mean;
             peak_sigma = this.peak_sigma;

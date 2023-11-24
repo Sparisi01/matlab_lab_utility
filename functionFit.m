@@ -1,14 +1,14 @@
 classdef functionFit < handle
     % ---------------------------------------------------
-    % Funzione per eseguire fit a un modello generico e
-    % produrre grafici con numero di parametri variabile. 
+    % GITHUB: https://github.com/Sparisi01/matlab_lab_utility
     % ---------------------------------------------------
-    % DIPENDENZE:
+    % DEPENDENCIES: 
     % - ./utils/numberToText.m
     % - ./utils/exportFigure.m
     % - ./utils/propagation1D.m
     % - ./utils/avoidOversampling.m
     % - ./utils/tight_subplot.m
+    % - ./utils/textBox.m
     % ---------------------------------------------------
 
     properties
@@ -29,34 +29,34 @@ classdef functionFit < handle
         chi2norm (1, 1) double {mustBeNonnegative}
         fig (1, 1)
         axes (:, 1)
-        dof (1, 1) double {mustBeNonnegative}
-        pValue (1, 1) double {mustBeNonnegative}
+        dof double {mustBeNonnegative}
+        pValue double {mustBeNonnegative}
         showParArray (:, 1) logical
-        showChi (1, 1) logical
-        showChiNorm (1, 1) logical
-        showPValue (1, 1) logical
-        showBox (1, 1) logical
-        showScarti (1, 1) logical
-        showGrid (1, 1) logical
-        showZoom (1, 1) logical
+        showChi logical
+        showChiNorm logical
+        showPValue logical
+        showBox logical
+        showRes logical
+        showGrid logical
+        showZoom logical
         showInitialParModel (1,1) logical 
-        showModel (1,1) logical
-        continuosData (1,1) logical
+        showModel logical
+        continuosData logical
         zoomPosition (1, 4) double {mustBeReal, mustBeFinite}
         modelColor (1, 4) double {mustBeReal, mustBeFinite}
         modelLineStyle (1, 1) string
         dataColor (1, 3) double {mustBeReal, mustBeFinite}
-        lineWidth (1, 1) double
-        name (1, 1) string
-        labelx (1, 1) string
-        labely (1, 1) string
+        lineWidth double
+        title string
+        labelx string
+        labely string
         reslabely (1, 1) string
         logX (1, 1) logical
         logY (1, 1) logical
         xlim (1, 2) double {mustBeReal, mustBeFinite}
         ylim (1, 2) double {mustBeReal, mustBeFinite}
         resylim (1, 2) double {mustBeReal, mustBeFinite}
-        boxPosition (1, 2) double {mustBeReal, mustBeFinite}
+        boxPosition string
         pedice (1, 1) char
         fontSize (1, 1) double {mustBeReal, mustBeFinite}
         figureWidth (1, 1) double {mustBeReal, mustBeFinite}
@@ -71,70 +71,70 @@ classdef functionFit < handle
 
         % Valori di default per le opzioni
         function this = functionFit()
-            % Dati --------------------------
+            % Data --------------------------
             this.datax = [];
             this.datay = [];
             this.sigmax = [];
             this.sigmay = [];
 
-            % Parametri modello -------------
-            this.model = @(par, x) par(1) + x * par(2); % Modello su cui eseguire il fit
-            this.par = []; % Valore dei parametri
-            this.previousPar = []; % Valore dei parametri
-            this.errpar = []; % Errore dei parametri
-            this.upperBounds = []; % UpperBound parametri
-            this.lowerBounds = []; % LowerBound parametri
-            this.units = []; % Units for parameters in legend box
-            this.parnames = []; % Parameters name in legend box
-            this.noOversampling = 0;  % Merge data on the same x
+            % Madel parameters -------------
+            this.model = @(par, x) par(1) + x * par(2);
+            this.par = [];
+            this.errpar = [];
+            this.upperBounds = [];
+            this.lowerBounds = [];
+            this.units = [];
+            this.parnames = [];
+            this.noOversampling = 0;
 
-            % Risultati fit  ----------------
-            this.yfit = []; % Y calcolati post regressione con parametri ottimizzati
-            this.chi2norm = inf; % CHi quadro normalizzato fit
-            this.dof = 0; % Gradi di libertà fit
-            this.pValue = 0; % P value fit
-            this.fig = 0; % Fig dopo aver generato figura e residui
-            this.axes = []; % Array contenenti gli assi dopo aver generato figura e residui
+            % Fit results  ----------------
+            % After a fit function is called these parameters are
+            % filled with the current fit results.
+            this.yfit = [];
+            this.chi2norm = inf;
+            this.dof = 0;
+            this.pValue = 0;
+            this.fig = 0;
+            this.axes = [];
+            this.previousPar = [];
             
-            % Estetica ----------------------
-            this.showParArray = [1 1]; % Scegli quali parametri mostrate con un array di bool della stessa dimensione di par
-            this.showChi = 1; % Mostra o no chi quadro in legenda
-            this.showChiNorm = 0; % Mostra chi2normalizzato
-            this.showPValue = 0; % Mostra PValue
-            this.showBox = 1; % Mostra o no box parametri
-            this.showScarti = 1; % Mostra o no grafico degli scarti
-            this.showInitialParModel = 0; % Mostra modello con parametri iniziali su grafico
-            this.showModel = 1; % Mostra modello sul grafico
-            this.continuosData = 0; % Modalità visualizzazione continua
-            this.modelColor = [1 0 0 1]; % Colore linea modello
-            this.modelLineStyle = '-'; % Stile linea modello e retta scarti
-            %this.dataColor = [0.00 0.45 0.74]; % Colore dati bello
-            this.dataColor = [0.00 0.00 1.00]; % Colore dati blu
-            this.lineWidth = 2; % Spessore linea modello
-            this.xlim = [0 0]; % Xlim, se uguali o in ordine sbagliato viene impostato in automatico
-            this.ylim = [0 0]; % Ylim, se uguali o in ordine sbagliato viene impostato in automatico
-            this.resylim = [0 0]; % Ylim residui, se uguali o in ordine sbagliato viene impostato in automatico
-            this.verbose = 1; % Bla Bla Bla
-            this.name = "Model"; % Titolo grafico
-            this.labelx = "X Axes"; % Label Asse x
-            this.labely = "Y Axes"; % Label Asse y
-            this.reslabely = "Scarti"; % Label Asse y scarti
-            this.logX = 0; % Asse X logaritmico (anche per scarti garantendo allineamento)
-            this.logY = 0; % Asse Y logaritmico
-            this.boxPosition = [0.145 0.885]; % [x, y] la dimensione di aggiusta in automatico
-            this.pedice = ' '; % Pedice parametri legenda. Utile se si hanno molti grafici con parametri omonomi.
-            this.showZoom = false; % Mostra grafico con zoom su un punto e barre incertezza
-            this.zoomPosition = [0.70 0.70, 0.15, 0.15]; % [x, y, w, h]
-            this.showGrid = 1; % Mostra griglia minor sui grafici
-            this.fontSize = 14; % Dimensione font sia nelle label che nella box
-            this.figureWidth = 8; % Larghezza immagine salvata in pollici
-            this.figureHeight = 6; % Altezza immagine salvata in pollici    
+            % Estetics ----------------------
+            this.showParArray = [1 1];
+            this.showChi = 1;
+            this.showChiNorm = 0;
+            this.showPValue = 0;
+            this.showBox = 1;
+            this.showRes = 1;
+            this.showInitialParModel = 0;
+            this.showModel = 1;
+            this.continuosData = 0;
+            this.modelColor = [1 0 0 1];
+            this.modelLineStyle = '-';
+            this.dataColor = [0.00 0.00 1.00];
+            this.lineWidth = 2;
+            this.xlim = [0 0];
+            this.ylim = [0 0];
+            this.resylim = [0 0];
+            this.verbose = 1;
+            this.title = "Model";
+            this.labelx = "X Axes";
+            this.labely = "Y Axes";
+            this.reslabely = "Scarti";
+            this.logX = 0;
+            this.logY = 0;
+            this.boxPosition = "northeast";
+            this.pedice = ' ';
+            this.showZoom = false;
+            this.zoomPosition = [0.70 0.70, 0.15, 0.15];
+            this.showGrid = 1;
+            this.fontSize = 14;
+            this.figureWidth = 8;
+            this.figureHeight = 6;    
             this.hMargins = [0.12 0.08];
             this.wMargins = [0.13 0.13]; 
             this.padding = 0.05; 
         end
 
-        % Genera immagine plot usando il modello dato
         function [par, errpar, yfit, chi2norm, dof, pValue, fig, ax] = plotModelFit(this, file_name, showFig)
             arguments
                 this
@@ -266,14 +266,13 @@ classdef functionFit < handle
 
         function [par, errpar, yfit, chi2norm, dof, pValue, flag] = modelFit(this)
             
-            % Contolla validità parametri
             safetyCheck(this)
 
             if(this.noOversampling)
                 [this.datax, this.datay, this.sigmax, this.sigmay] = avoidOversampling(this.datax, this.datay, this.sigmax, this.sigmay);
             end           
             
-            scarti = @(par, xd, yd, ed) (this.model(par, xd) - yd) ./ ed;
+            res_model = @(par, xd, yd, ed) (this.model(par, xd) - yd) ./ ed;
 
             if (isempty(this.upperBounds))
                 tmp_ub = ones(size(this.par)) * inf;
@@ -293,16 +292,16 @@ classdef functionFit < handle
                 options = optimoptions('lsqnonlin', 'Display', 'none');
             end
             
-            [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(scarti, this.par, tmp_lb, tmp_ub, options, this.datax, this.datay, this.sigmay);
+            [par, resnorm, ~, flag, ~, ~, jacobian] = lsqnonlin(res_model, this.par, tmp_lb, tmp_ub, options, this.datax, this.datay, this.sigmay);
                       
             dof = (length(this.datax) - length(par));  
             yfit = this.model(par, this.datax);
             
-            sigma_propagata = propagation1D(@(x) this.model(par, x), this.datax, this.sigmax);
-            sigmaScarti = sqrt(this.sigmay .^2 + (sigma_propagata).^2); 
+            s_x_prop = propagation1D(@(x) this.model(par, x), this.datax, this.sigmax);
+            s_res = sqrt(this.sigmay .^2 + (s_x_prop).^2); 
             
-            scarto_y = abs(this.datay - yfit);            
-            chi2norm = sum((scarto_y./sigmaScarti).^2)/dof;                      
+            res_y = abs(this.datay - yfit);            
+            chi2norm = sum((res_y./s_res).^2)/dof;                      
             pValue = 1 - chi2cdf(resnorm, dof);    
 
             covar = inv(jacobian' * jacobian);
@@ -322,35 +321,30 @@ classdef functionFit < handle
 
     methods (Hidden)
 
-        % Fa tante cose belle
-        function safetyCheck(this)
+        function safetyCheck(this)            
             
-            % Controlla dimensione dati -----------------------------------
             if any(size(this.datay) ~= size(this.datax))                   
-                error('u:stuffed:it', 'datax, datay devono essere della stesa dimensione');
+                error('u:stuffed:it', "'datax' and 'datay' must be of the same dimension.");
             end
-
-            % Controlla dimensione bound ----------------------------------
+            
             if ~(isempty(this.upperBounds) || isempty(this.lowerBounds)) && ...
                     any(size(this.upperBounds) ~= size(this.lowerBounds))
 
-                error('u:stuffed:it', "ub e lb devono essere della stesa dimensione");
+                error('u:stuffed:it', "'ub' and 'lb' must be of the same dimension.");
             end
             
-            % Controlla dimensione incertezze -----------------------------
-            if (isempty(this.sigmax))
+            if (isempty(this.sigmax)) % Check sigmax dimensions
                 this.sigmax = zeros(size(this.datay));
-                warning("Incertezze su datax non assegnate. Inizializzate a 0")           
+                warning("'datax' not assigned. Zeros array used as default value.")           
             else
                 if length(this.sigmax) == 1
                     this.sigmax = ones(size(this.datax)) * this.sigmax;
                 end                
             end
             
-            % Controlla dimensioni sigma e inizializza ---------------------
-            if (isempty(this.sigmay))
+            if (isempty(this.sigmay)) % Check sigmay dimensions
                 this.sigmay = ones(size(this.datay));
-                warning("Incertezze su datay non assegnate. Inizializzate a un vettore unitario.")        
+                warning("'datax' not assigned. Unitary array used as default value.")     
             else
                 if length(this.sigmay) == 1
                     this.sigmay = ones(size(this.datay)) * this.sigmay;
@@ -362,25 +356,26 @@ classdef functionFit < handle
 
             fig = figure('units','inch','position',[0,0,this.figureWidth,this.figureHeight],'visible','off');
             
-            h = 1 + this.showScarti;
+            h = 1 + this.showRes;
             [ax, P] = tight_subplot(h,1,[this.padding 0],this.hMargins,this.wMargins);
 
-            if this.showScarti
+            if this.showRes
                 set(ax(1),'Position',P{1}.*[1,0.78,1,1.3]);
                 set(ax(2),'Position',P{2}.*[1,1,1,0.7]);
             end                   
                       
             set(ax(1),'box','on');
             hold(ax(1),'on');
-            
+            title(ax(1),this.title);
+            ylabel(ax(1),this.labely);
+                        
             scatter(ax(1),this.datax, this.datay, "MarkerEdgeColor", this.dataColor);
                                        
             if isLinearFit
                 if this.showModel
                     fplot(ax(1),@(x) this.par(1) + x * this.par(2), 'Color', this.modelColor, 'LineStyle', this.modelLineStyle, "LineWidth",this.lineWidth);
                 end
-                if this.showInitialParModel
-                    
+                if this.showInitialParModel                   
                     fplot(ax(1),@(x) this.previousPar(1) + x * this.previousPar(2), 'Color', 'k', 'LineStyle', this.modelLineStyle,"LineWidth",this.lineWidth);
                 end             
             else
@@ -395,9 +390,8 @@ classdef functionFit < handle
             delta_x = abs(max(this.datax) - min(this.datax));
             delta_y = abs(max(this.datay) - min(this.datay));
             
+            % Manage x log axes to avoid passing througth zero
             if this.xlim(1) >= this.xlim(2)
-                % Gestione caso asse logaritmico per evitare il passaggio
-                % dei limiti attraverso lo 0
                 if this.logX
                     xlim(ax(1),sort([min(this.datax) * 0.2 max(this.datax) * 1.2]));
                 else     
@@ -407,9 +401,8 @@ classdef functionFit < handle
                 xlim(ax(1),[this.xlim(1) this.xlim(2)]);
             end
 
+            % Manage y log axes to avoid passing througth zero
             if this.ylim(1) >= this.ylim(2)  
-                % Gestione caso asse logaritmico per evitare il passaggio
-                % dei limiti attraverso lo 0
                 if this.logY
                     ylim(ax(1),sort([min(this.datay) * 0.2 max(this.datay) * 1.2]));
                 else     
@@ -419,8 +412,6 @@ classdef functionFit < handle
                 ylim(ax(1),[this.ylim(1) this.ylim(2)]);
             end
             
-            title(ax(1),this.name);
-            ylabel(ax(1),this.labely);
 
             if this.logX
                 set(ax(1), 'XScale', 'log')
@@ -434,15 +425,13 @@ classdef functionFit < handle
                 grid(ax(1),'minor');
             end
 
-            if ~this.showScarti
+            if ~this.showRes
                 xlabel(ax(1),this.labelx);
             else
                 set(ax(1), 'XTickLabel', []);
             end
                         
-            if this.showBox
-                              
-                % Aggiusta array unita di misura.
+            if this.showBox                             
                 if (isempty(this.units))       
                     for ii = 1:length(this.par)
                         this.units(ii) = "";
@@ -452,13 +441,10 @@ classdef functionFit < handle
                         for ii = 1:length(this.par)
                             this.units(ii) = "";
                         end
-                        warning("Dimensione di par diversa da units. Parametro inizializzato in automatico.")
+                        warning("The argument 'par' must have the same size of 'units'. Values corrected automatically.")
                     end
                 end
                 
-                % Aggiusta array nome parametri. Se non impostato viene inizializzato a un vettore delle
-                % dimensioni di par formato da caratteri crescenti in ordine
-                % alfabetico
                 if (isempty(this.parnames))
                     for ii = 1:length(this.par)
                         this.parnames(ii) = 'a' + ii - 1;
@@ -468,7 +454,7 @@ classdef functionFit < handle
                         for ii = 1:length(this.par)
                             this.parnames(ii) = 'a' + ii - 1;
                         end
-                        warning("Dimensione di par diversa da parnames. Parametro inizializzato in automatico.")
+                        warning("The argument 'par' must have the same size of 'parnames'. Values corrected automatically.")
                     end
                 end              
                 
@@ -481,7 +467,8 @@ classdef functionFit < handle
                     end
                 end
 
-                % Costruisci dinamicamente la legenda con n parametri.
+                % Build the textBox dynamically based on the number of
+                % parameters and userpreferences on chi2
                 txt = "";            
                 for ii = 1:length(this.par)
                     if this.showParArray(ii)
@@ -493,10 +480,9 @@ classdef functionFit < handle
                         end
                     end
                 end
-
-                % Se il chi2 è minore di 2 vengono tenute 2 cifre significative
-                % sennò si arrotonda all'intero.
-                if this.chi2norm * this.dof > 2
+                
+                % Round Chi2 
+                if this.chi2norm * this.dof > 2 
                     nRound = 0;
                 else
                     nRound = 2;
@@ -513,30 +499,24 @@ classdef functionFit < handle
                 if this.showPValue
                     txt(length(txt) + 1) = "pValue_{" + this.pedice + "} = " + round(this.pValue, 2);
                 end
-
-                % Posizione box
-                annotation("textbox", [this.boxPosition 0 0], ...
-                    "BackgroundColor", [1, 1, 1], ...
-                    "fontSize", this.fontSize, ...
-                    "String", txt(2:end), ...
-                    'FitBoxToText', 'on' ...
-                );
+                                
+                textBox(txt(2:end),this.boxPosition,ax(1),this.fontSize); % Place textBox
             end
 
-            if this.showScarti                
+            if this.showRes                
                 
                 set(ax(2),'box','on');
                 hold(ax(2),'on');
 
                 if isLinearFit
-                    sigmaScarti = sqrt(this.sigmay .^ 2 + (this.par(2) * this.sigmax) .^ 2);
+                    s_res = sqrt(this.sigmay .^ 2 + (this.par(2) * this.sigmax) .^ 2);
                 else
-                    % Derivata numerica del modello per propagazione incertezze                   
-                    sigma_propagata = propagation1D(@(x) this.model(this.par, x), this.datax, this.sigmax);
-                    sigmaScarti = sqrt(this.sigmay .^2 + (sigma_propagata).^2);    
+                    % Numeric propagation of 'sigmax' through the optimized model                   
+                    s_x_prop = propagation1D(@(x) this.model(this.par, x), this.datax, this.sigmax);
+                    s_res = sqrt(this.sigmay .^2 + (s_x_prop).^2);    
                 end
                 
-                scarto_y = this.datay - this.yfit;
+                res_y = this.datay - this.yfit;
                                
                 if this.logX
                     set(ax(2), 'XScale', 'log')
@@ -546,9 +526,6 @@ classdef functionFit < handle
                     grid(ax(2),'minor');
                 end
 
-                % Linea orizzontale lungo y=0 negli scarti
-                % Gestione caso asse logaritmico per evitare il passaggio
-                % delle coordinate attraverso lasse 0
                 if this.logX                   
                     x = sort([min(this.datax) * 0.2 max(this.datax) * 1.2]);
                     y = [0 0];
@@ -556,21 +533,21 @@ classdef functionFit < handle
                     x = [min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x];
                     y = [0 0];
                 end                
+
                 line(ax(2),x, y, 'Color', this.modelColor, 'LineStyle', '-',"LineWidth", this.lineWidth)
                 
                 if this.continuosData
                     plot(ax(2),this.datax, this.datay,"LineWidth",this.lineWidth,"Color",[this.dataColor 1]);
-                    plot(ax(2),this.datax, this.datay - sigmaScarti, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
-                    plot(ax(2),this.datax, this.datay + sigmaScarti, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
+                    plot(ax(2),this.datax, this.datay - s_res, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
+                    plot(ax(2),this.datax, this.datay + s_res, "LineStyle","--","Color", [this.dataColor .3],"LineWidth",this.lineWidth);
                 else
-                    e2 = errorbar(ax(2),this.datax, scarto_y, sigmaScarti);
+                    e2 = errorbar(ax(2),this.datax, res_y, s_res, "Color",this.dataColor);
                     e2.LineStyle = 'none';                  
-                    scatter(ax(2),this.datax, scarto_y, "MarkerEdgeColor", this.dataColor);
+                    scatter(ax(2),this.datax, res_y, "MarkerEdgeColor", this.dataColor);
                 end
                
+                % Manage x log axes to avoid passing througth zero
                 if this.xlim(1) >= this.xlim(2)
-                    % Gestione caso asse logaritmico per evitare passaggio
-                    % dei limiti attraverso lo 0
                     if this.logX
                         xlim(ax(2),sort([min(this.datax) * 0.2 max(this.datax) * 1.2]));
                     else     
@@ -581,8 +558,8 @@ classdef functionFit < handle
                 end
                 
                 if this.resylim(1) >= this.resylim(2)
-                    tmp_limits = max([abs(max(scarto_y)) + 2*abs(max(sigmaScarti)) abs(min(scarto_y)) + 2*abs(max(sigmaScarti))]);
-                    ylim(ax(2),[-tmp_limits tmp_limits]); % Asse Y scarti simmetrico rispetto allo 0      
+                    tmp_limits = max([abs(max(res_y)) + 2*abs(max(s_res)) abs(min(res_y)) + 2*abs(max(s_res))]);
+                    ylim(ax(2),[-tmp_limits tmp_limits]);
                 else
                     ylim(ax(2),[this.resylim(1) this.resylim(2)])
                 end
@@ -591,8 +568,7 @@ classdef functionFit < handle
                 xlabel(ax(2),this.labelx);                                              
             end
 
-            % Grafico errore zoom  ----------------------------------------
-
+            % Plot zoom on error
             if (this.showZoom)
                 id = round(length(this.datax) / 2);
                 x = this.datax(id);
@@ -605,7 +581,7 @@ classdef functionFit < handle
                     grid(ax(length(ax)),'minor');
                 end
             end
-
+            
             for a = ax
                 set(a, "FontSize", this.fontSize);
             end
