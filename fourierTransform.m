@@ -1,10 +1,8 @@
 classdef fourierTransform < handle
-    % -------------------------------------------------
-    % Funzione per eseguire agilmente la trasformata
-    % di fourier di un set di dati e generare il grafico
-    % in ampiezza e fase.
     % ---------------------------------------------------
-    % DIPENDENZE:
+    % GITHUB: https://github.com/Sparisi01/matlab_lab_utility
+    % ---------------------------------------------------
+    % DEPENDENCIES:
     % - ./utils/exportFigure.m
     % - ./functionFit.m
     % ---------------------------------------------------
@@ -13,40 +11,40 @@ classdef fourierTransform < handle
         
         data (:,1) double {mustBeReal, mustBeFinite} 
         sigmaData (:,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} 
-        dt (1,1) double {mustBeReal, mustBeFinite} % Intervallo di campionamento
-        tollerance (1,1) double {mustBeReal, mustBeFinite, mustBeNonnegative} % Tolleranza sulle ampiezze per evitare errori numerici. Porre a inf per disattivare.
+        dt (1,1) double {mustBeReal, mustBeFinite}
+        tollerance (1,1) double {mustBeReal, mustBeFinite, mustBeNonnegative}  % Tolleranza sulle ampiezze per evitare errori numerici. Porre a inf per disattivare.
         verbose (1, :) logical
 
         % Parametri che vengono riempiti dopo aver chiamato transform con i risultati        
-        frequencies (:,1) double {mustBeReal, mustBeFinite} % Vettore frequenze      
-        amps (:,1) double {mustBeReal, mustBeFinite} % Vettore ampiezze
-        phases (:,1) double {mustBeReal, mustBeFinite} % Vettore fasi
-        dF (1,1) double {mustBeReal, mustBeFinite} % intervallo di frequenza minimo risolvibile
-        sigmaAmps (:,1) double % Vettore incertezze sulle ampiezze
-        sigmaPhases (:,1) double % Vettore incertezze sulle fasi
+        frequencies (:,1) double {mustBeReal, mustBeFinite}      
+        amps (:,1) double {mustBeReal, mustBeFinite}
+        phases (:,1) double {mustBeReal, mustBeFinite}
+        dF (1,1) double {mustBeReal, mustBeFinite}
+        sigmaAmps (:,1) double
+        sigmaPhases (:,1) double
         
-        % Parametri peak detection
+        % Peak detection
         peak_detection_centro_index (1,1) double 
         peak_detection_interval_index (1,1) double 
-        peak_mean (1,1) double % Valore medio picco
-        peak_sigma (1,1) double % Sigma picco
-        peak_amp (1,1) double % Ampiezza picco
-        peak_phase (1,1) double % Fase picco
+        peak_mean (1,1) double
+        peak_sigma (1,1) double
+        peak_amp (1,1) double
+        peak_phase (1,1) double
         peak_amp_sigma (1,1) double
         peak_phase_sigma (1,1) double
 
-        % Parametri estetici
+        % Aesthetics
         name (1,1) string
         xLabel (1,1) string
         yLabel_phase (1,1) string
         yLabel_abs (1,1) string
         color (1,3) double {mustBeReal, mustBeFinite}
         xAxisLim (1,2) double {mustBeReal, mustBeFinite}
-        xAxisAsOmegas (1,1) logical % Visualizza pulsazioni sull'asse x invece che frequenze       
-        mirrored (1,1) logical % Visualizza grafico specchiato       
-        fontSize (1, 1) double {mustBeReal, mustBeFinite} % Dimensione font 
-        figureWidth (1, 1) double {mustBeReal, mustBeFinite} % Larghezza immagine salvata in pollici
-        figureHeight (1, 1) double {mustBeReal, mustBeFinite} % Altezza immagine salvata in pollici     
+        xAxisAsOmegas (1,1) logical      
+        mirrored (1,1) logical      
+        fontSize (1, 1) double {mustBeReal, mustBeFinite}
+        figureWidth (1, 1) double {mustBeReal, mustBeFinite}
+        figureHeight (1, 1) double {mustBeReal, mustBeFinite}  
         stemPlot (1,1) logical  
     end
 
@@ -86,29 +84,19 @@ classdef fourierTransform < handle
             this.stemPlot = 1;
         end
 
-        % -----------------------------------------------------------------
-        % Utilizzo della funzione FFT per estrarre vettore di ampiezze e fasi dal vettore dati
+        
         % https://www.gaussianwaves.com/2015/11/interpreting-fft-results-obtaining-magnitude-and-phase-information/           
         function [frequencies, amps, phases, sigmaAmps, sigmaPhases] = transform(this)
             arguments
                 this                
             end
-                     
-            % FFT dati
-            fft_data = fftshift(fft(this.data))/length(this.data);
-            % Frequenza massima risolvibile                      
-            Fs = 1/this.dt;                                
-            % Incertezza sulle frequenze
+                                
+            fft_data = fftshift(fft(this.data))/length(this.data);                                  
+            Fs = 1/this.dt;                                            
             this.dF = Fs/length(this.data); 
-           
-            % Vettore frequenze
             this.frequencies = (-Fs/2:this.dF:Fs/2-this.dF)';
-                       
-            % Vettore Ampiezze
             this.amps = abs(fft_data);            
             
-            % Permetti impostare la sigma costante per tutto il set di dati
-            % passando uno scalare
             if length(this.sigmaData) == 1
                 this.sigmaData = ones(size(this.data)) * this.sigmaData;            
             end
@@ -168,19 +156,17 @@ classdef fourierTransform < handle
             arguments
                 this,
                 fileName (1,1) string = "",
-                showFig (1,1) logical = 0
+                showFig (1,1) logical = 1
             end
             
             [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
 
             [fig, ax] = plotTransform(this, amps, sigmaAmps,1);
                         
-            % Rendi visibile figura
             if showFig
                 set(fig, 'visible', 'on'); 
             end
 
-            % Esporta figura
             if (strlength(fileName) > 0)
                 exportFigure(fig, ax, fileName,this.fontSize, this.figureWidth, this.figureHeight);
             end 
@@ -192,18 +178,16 @@ classdef fourierTransform < handle
             arguments
                 this,
                 fileName (1,1) string = "",
-                showFig (1,1) logical = 0
+                showFig (1,1) logical = 1
             end
                         
             [frequencies, amps, phases, sigmaAmps, sigmaPhases] = this.transform();
             [fig, ax] = plotTransform(this, phases, sigmaPhases, 0);
             
-            % Rendi visibile figura
             if showFig
                 set(fig, 'visible', 'on'); 
             end
 
-            % Esporta figura
             if (strlength(fileName) > 0)
                 exportFigure(fig, ax, fileName,this.fontSize, this.figureWidth, this.figureHeight);
             end 
@@ -221,7 +205,6 @@ classdef fourierTransform < handle
             index_centro = this.peak_detection_centro_index;
             intervallo = this.peak_detection_interval_index;
             
-            % Trova l'indice corrispondente a frequenza zero
             [~,index_zero] = min(abs(this.frequencies));
                       
             ampiezza_meta_altezza = 0;
@@ -236,23 +219,14 @@ classdef fourierTransform < handle
                 intervallo = 5;                      
             end
             
-            % Definizione intervallo attorno al centro
             intervallo_up = index_centro + intervallo;
             intervallo_do = index_centro - intervallo;     
                            
             
-            % Seleziona solo dati nell'intorno del picco selezionato 
             tmp_freq = this.frequencies(intervallo_do:intervallo_up);
             tmp_amps = this.amps(intervallo_do:intervallo_up);
-            tmp_s_amps = this.sigmaAmps(intervallo_do:intervallo_up);
+            % tmp_s_amps = this.sigmaAmps(intervallo_do:intervallo_up);
             tmp_phases = this.phases(intervallo_do:intervallo_up);
-             
-            % % Calcolo media e dmedia per il picco       
-            % probability_density_freq = tmp_amps/sum(tmp_amps);
-            % s_probability_density_freq = (sum(tmp_amps) - tmp_amps)/(sum(tmp_amps)^2).*tmp_s_amps;
-            % peak_mean = sum(tmp_freq .* probability_density_freq);
-            % % Incertezza sulla densità di probabilità + incertezza di risuluzione in frequenza 
-            % peak_sigma = sqrt(sum(s_probability_density_freq.^2) + this.dF^2/12); 
 
             x_meta_altezza_up = linearSampling(this.amps(index_centro-1:index_centro+intervallo),this.frequencies(index_centro-1:index_centro+intervallo),ampiezza_meta_altezza);
             x_meta_altezza_down = linearSampling(this.amps(index_centro-intervallo:index_centro-1),this.frequencies(index_centro-intervallo:index_centro-1),ampiezza_meta_altezza);
@@ -308,8 +282,7 @@ classdef fourierTransform < handle
             
             
             if this.stemPlot
-                stem(xAxisData,yData,"filled", "Color", this.color);
-            
+                stem(xAxisData,yData,"filled", "Color", this.color);           
             else
                 errorbar(xAxisData,yData,sigmaY,"Color",this.color,"Marker",".","LineStyle", "none");
             end

@@ -9,6 +9,7 @@ classdef functionFit < handle
     % - ./utils/avoidOversampling.m
     % - ./utils/tight_subplot.m
     % - ./utils/textBox.m
+    % - ./utils/geograficalPlacement.m
     % ---------------------------------------------------
 
     properties
@@ -42,7 +43,7 @@ classdef functionFit < handle
         showInitialParModel (1,1) logical 
         showModel logical
         continuosData logical
-        zoomPosition (1, 4) double {mustBeReal, mustBeFinite}
+        zoomPosition string
         modelColor (1, 4) double {mustBeReal, mustBeFinite}
         modelLineStyle (1, 1) string
         dataColor (1, 3) double {mustBeReal, mustBeFinite}
@@ -69,7 +70,6 @@ classdef functionFit < handle
 
     methods
 
-        % Valori di default per le opzioni
         function this = functionFit()
             % Data --------------------------
             this.datax = [];
@@ -98,7 +98,7 @@ classdef functionFit < handle
             this.axes = [];
             this.previousPar = [];
             
-            % Estetics ----------------------
+            % Aesthetics -------------------
             this.showParArray = [1 1];
             this.showChi = 1;
             this.showChiNorm = 0;
@@ -122,10 +122,10 @@ classdef functionFit < handle
             this.reslabely = "Scarti";
             this.logX = 0;
             this.logY = 0;
-            this.boxPosition = "northeast";
+            this.boxPosition = "northwest";
             this.pedice = ' ';
             this.showZoom = false;
-            this.zoomPosition = [0.70 0.70, 0.15, 0.15];
+            this.zoomPosition = "northeast";
             this.showGrid = 1;
             this.fontSize = 14;
             this.figureWidth = 8;
@@ -138,8 +138,8 @@ classdef functionFit < handle
         function [par, errpar, yfit, chi2norm, dof, pValue, fig, ax] = plotModelFit(this, file_name, showFig)
             arguments
                 this
-                file_name (1, 1) string = "",
-                showFig (1,1) logical = 1
+                file_name string = "",
+                showFig logical = 1
             end
             
             this.previousPar = this.par;
@@ -163,8 +163,8 @@ classdef functionFit < handle
         function [par, errpar, yfit, chi2norm, dof, pValue, fig, ax] = plotLinearFit(this, file_name, showFig)
             arguments
                 this
-                file_name (1, 1) string = "",
-                showFig (1,1) logical = 1
+                file_name string = "",
+                showFig logical = 1
             end
             
             this.previousPar = this.par;
@@ -568,15 +568,14 @@ classdef functionFit < handle
                 xlabel(ax(2),this.labelx);                                              
             end
 
-            % Plot zoom on error
             if (this.showZoom)
                 id = round(length(this.datax) / 2);
                 x = this.datax(id);
                 y = this.datay(id);
-                ax(length(ax)+1) = axes("Position", this.zoomPosition);
+                ax(length(ax)+1) = geograficPlacement(axes("Position", [0,0,0.15,0.15]), this.zoomPosition, ax(1));
                 errorbar(ax(length(ax)),x, y, -this.sigmay(id), this.sigmay(id), -this.sigmax(id), this.sigmax(id), 'o');
-                %xlim(ax(length(ax)), sort([(x - this.sigmax(id) * 1.5) (x + this.sigmax(id) * 1.5)]));
-                %ylim(ax(length(ax)), sort([(y - this.sigmay(id) * 1.5) (y + this.sigmay(id) * 1.5)]));
+                xlim(ax(length(ax)), sort([(x - this.sigmax(id) * 1.5) (x + this.sigmax(id) * 1.5)]));
+                ylim(ax(length(ax)), sort([(y - this.sigmay(id) * 1.5) (y + this.sigmay(id) * 1.5)]));
                 if this.showGrid
                     grid(ax(length(ax)),'minor');
                 end
