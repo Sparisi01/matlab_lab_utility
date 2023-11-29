@@ -530,7 +530,7 @@ classdef functionFit < handle
                     x = sort([min(this.datax) * 0.2 max(this.datax) * 1.2]);
                     y = [0 0];
                 else
-                    x = [min(this.datax) - 0.1 * delta_x max(this.datax) + 0.1 * delta_x];
+                    x = this.xlim;
                     y = [0 0];
                 end                
 
